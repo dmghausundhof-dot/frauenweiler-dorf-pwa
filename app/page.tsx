@@ -20,9 +20,7 @@ import {
   loadVillageDataFromSupabase,
 } from '@/lib/dorfapp/village-data';
 import { parseSocialLinksInput, labelForSocialUrl } from '@/lib/dorfapp/social-links';
-
-/** Muss im Lösch-Dialog exakt eingegeben werden (Groß-/Kleinschreibung beachten). */
-const ACCOUNT_DELETE_PHRASE = 'KONTO LÖSCHEN';
+import { ACCOUNT_DELETE_PHRASE } from '@/lib/dorfapp/account-delete';
 
 interface Poll {
   id: string;
@@ -197,6 +195,7 @@ export default function FrauenweilerDorfApp() {
   const [deleteAccountEmailConfirm, setDeleteAccountEmailConfirm] = useState('');
   const [deleteAccountAuthHint, setDeleteAccountAuthHint] = useState<'password' | 'email_confirm' | null>(null);
   const [deletingAccount, setDeletingAccount] = useState(false);
+  const [sendingDeleteLink, setSendingDeleteLink] = useState(false);
 
   // Admin form states
   const [newNews, setNewNews] = useState({ title: '', content: '', category: 'Allgemein', important: false, socialLinksRaw: '' });
@@ -657,6 +656,49 @@ export default function FrauenweilerDorfApp() {
       toast.error('Konto konnte nicht gelöscht werden', { description: msg });
     } finally {
       setDeletingAccount(false);
+    }
+  };
+
+  const requestDeleteLinkByEmail = async () => {
+    if (!useSupabase) {
+      toast.message('Demo-Modus', { description: 'E-Mail-Link ist nur mit Supabase verfügbar.' });
+      return;
+    }
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    if (!session?.access_token) {
+      toast.error('Nicht angemeldet');
+      return;
+    }
+    const baseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    if (!baseUrl || !anonKey) {
+      toast.error('Konfiguration unvollständig');
+      return;
+    }
+    setSendingDeleteLink(true);
+    try {
+      const res = await fetch(`${baseUrl}/functions/v1/request-account-deletion`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+          apikey: anonKey,
+          'Content-Type': 'application/json',
+        },
+      });
+      const body = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) {
+        throw new Error(body.error || `HTTP ${res.status}`);
+      }
+      toast.success('E-Mail ist unterwegs', {
+        description: 'Öffne den Link in der Nachricht (gültig ca. 1 Stunde). Prüfe ggf. den Spam-Ordner.',
+      });
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      toast.error('Link konnte nicht gesendet werden', { description: msg });
+    } finally {
+      setSendingDeleteLink(false);
     }
   };
 
@@ -2016,6 +2058,29 @@ export default function FrauenweilerDorfApp() {
                 </p>
               </div>
             )}
+
+            <div className="mt-6 rounded-2xl border border-zinc-200 bg-zinc-50/90 p-4">
+              <p className="text-xs font-semibold text-[#475569]">Alternativ: E-Mail mit Bestätigungs-Link</p>
+              <p className="mt-1 text-xs leading-relaxed text-[#64748b]">
+                Du erhältst eine E-Mail mit einem einmaligen Link zur Seite „Konto löschen“. Dafür müssen die Supabase
+                Edge Functions deployt sein und u. a. <span className="font-mono">RESEND_API_KEY</span>,{' '}
+                <span className="font-mono">RESEND_FROM</span> und <span className="font-mono">PUBLIC_SITE_URL</span>{' '}
+                als Function-Secrets gesetzt sein.
+              </p>
+              <button
+                type="button"
+                disabled={sendingDeleteLink || deletingAccount}
+                onClick={() => void requestDeleteLinkByEmail()}
+                className="mt-3 flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl border border-[#166534]/30 bg-white px-4 py-2.5 text-sm font-semibold text-[#14532d] hover:bg-[#f0fdf4] disabled:opacity-50"
+              >
+                {sendingDeleteLink ? (
+                  <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
+                ) : (
+                  <Mail className="h-4 w-4 shrink-0" aria-hidden />
+                )}
+                Bestätigungs-Link an E-Mail senden
+              </button>
+            </div>
 
             <div className="mt-6 flex flex-col gap-2 sm:flex-row-reverse">
               <button

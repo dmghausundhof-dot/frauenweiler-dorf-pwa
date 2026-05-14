@@ -175,6 +175,24 @@ CREATE POLICY "Only admins can manage contributions" ON event_contributions FOR 
 CREATE POLICY "Users can signup for contributions" ON contribution_signups FOR INSERT WITH CHECK (auth.uid() = user_id);
 
 -- ============================================
+-- ACCOUNT DELETE TOKENS (Edge Functions, Service Role)
+-- ============================================
+CREATE TABLE IF NOT EXISTS public.account_delete_tokens (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  token TEXT NOT NULL UNIQUE,
+  expires_at TIMESTAMPTZ NOT NULL,
+  used_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE public.account_delete_tokens ENABLE ROW LEVEL SECURITY;
+
+CREATE INDEX IF NOT EXISTS account_delete_tokens_lookup
+  ON public.account_delete_tokens (token)
+  WHERE used_at IS NULL;
+
+-- ============================================
 -- STORAGE BUCKET for event images (run manually in Supabase Dashboard)
 -- ============================================
 -- Go to Storage → Create bucket "event-images" (public)
