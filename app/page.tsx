@@ -1,96 +1,96 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { 
-  Calendar, Users, Vote, Gift, Home, User, Bell, Plus, 
-  MapPin, Clock, Heart, Check, LogIn, LogOut, Shield 
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import {
+  Calendar, Users, Vote, Home, User, Bell, Plus,
+  MapPin, Clock, Heart, Check, LogIn, Shield,
+  Mail, Pencil, KeyRound, Loader2, Save,
+  Handshake, ExternalLink,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
-
-// Types
-type Tab = 'home' | 'news' | 'events' | 'polls' | 'contribute' | 'profile';
-
-interface Event {
-  id: number;
-  title: string;
-  date: string;
-  time: string;
-  location: string;
-  category: string;
-  attendees: number;
-  description: string;
-}
-
-interface NewsItem {
-  id: number;
-  title: string;
-  content: string;
-  category: string;
-  important: boolean;
-  date: string;
-}
+import {
+  type Tab,
+  type Event,
+  type NewsItem,
+  type Contribution,
+  type HelpRequest,
+  loadVillageDataFromSupabase,
+} from '@/lib/dorfapp/village-data';
 
 interface Poll {
-  id: number;
+  id: string;
   title: string;
   options: { text: string; votes: number }[];
   totalVotes: number;
   userVoted?: number;
 }
 
-interface Contribution {
-  id: number;
-  eventId: number;
-  type: 'mitbringen' | 'helfen';
-  description: string;
-  needed: number;
-  signedUp: number;
-}
-
-// Mock Data for Frauenweiler (realistic)
 const mockEvents: Event[] = [
-  { id: 1, title: "Dorffest Frauenweiler 2026", date: "2026-06-14", time: "14:00", location: "Dorfplatz", category: "Fest", attendees: 87, description: "Unser großes Sommerfest mit Live-Musik, Essen & Trinken für die ganze Familie." },
-  { id: 2, title: "Feuerwehrübung & Tag der offenen Tür", date: "2026-05-24", time: "10:00", location: "Feuerwehrhaus", category: "Feuerwehr", attendees: 34, description: "Vorstellung der neuen Drehleiter und Übung für die Jugendfeuerwehr." },
-  { id: 3, title: "Ortsverein Sitzung + Grillen", date: "2026-05-20", time: "19:30", location: "Vereinsheim", category: "Verein", attendees: 19, description: "Monatliche Sitzung des Ortsvereins mit anschließendem Grillen." },
+  { id: '1', title: "Dorffest Frauenweiler 2026", date: "2026-06-14", time: "14:00", location: "Dorfplatz", category: "Fest", attendees: 87, description: "Unser großes Sommerfest mit Live-Musik, Essen & Trinken für die ganze Familie." },
+  { id: '2', title: "Feuerwehrübung & Tag der offenen Tür", date: "2026-05-24", time: "10:00", location: "Feuerwehrhaus", category: "Feuerwehr", attendees: 34, description: "Vorstellung der neuen Drehleiter und Übung für die Jugendfeuerwehr." },
+  { id: '3', title: "Ortsverein Sitzung + Grillen", date: "2026-05-20", time: "19:30", location: "Vereinsheim", category: "Verein", attendees: 19, description: "Monatliche Sitzung des Ortsvereins mit anschließendem Grillen." },
 ];
 
 const mockNews: NewsItem[] = [
-  { id: 1, title: "Neue Bank auf dem Dorfplatz", content: "Die neue Sitzbank am Spielplatz ist aufgestellt. Vielen Dank an alle Spender!", category: "Allgemein", important: false, date: "2026-05-12" },
-  { id: 2, title: "Kerwe 2026 – Helfer gesucht!", content: "Wir suchen noch Helfer für den Auf- und Abbau der Kerwe. Meldet euch bitte beim Ortsverein.", category: "Verein", important: true, date: "2026-05-10" },
-  { id: 3, title: "Straßenfest am 14. Juni", content: "Save the Date! Unser großes Dorffest findet am 14. Juni statt. Mehr Infos folgen.", category: "Fest", important: true, date: "2026-05-08" },
+  { id: '1', title: "Neue Bank auf dem Dorfplatz", content: "Die neue Sitzbank am Spielplatz ist aufgestellt. Vielen Dank an alle Spender!", category: "Allgemein", important: false, date: "2026-05-12" },
+  { id: '2', title: "Kerwe 2026 – Helfer gesucht!", content: "Wir suchen noch Helfer für den Auf- und Abbau der Kerwe. Meldet euch bitte beim Ortsverein.", category: "Verein", important: true, date: "2026-05-10" },
+  { id: '3', title: "Straßenfest am 14. Juni", content: "Save the Date! Unser großes Dorffest findet am 14. Juni statt. Mehr Infos folgen.", category: "Fest", important: true, date: "2026-05-08" },
 ];
 
 const mockPolls: Poll[] = [
-  { 
-    id: 1, 
-    title: "Welche Farbe soll die neue Bank am Dorfplatz haben?", 
+  {
+    id: '1',
+    title: "Welche Farbe soll die neue Bank am Dorfplatz haben?",
     options: [
       { text: "Grün (wie bisher)", votes: 42 },
       { text: "Braun / Holzoptik", votes: 31 },
-      { text: "Anthrazit / Modern", votes: 18 }
-    ], 
-    totalVotes: 91 
+      { text: "Anthrazit / Modern", votes: 18 },
+    ],
+    totalVotes: 91,
   },
-  { 
-    id: 2, 
-    title: "Soll es beim Dorffest ein Kinderprogramm geben?", 
+  {
+    id: '2',
+    title: "Soll es beim Dorffest ein Kinderprogramm geben?",
     options: [
       { text: "Ja, mit Hüpfburg & Basteln", votes: 67 },
       { text: "Nur ein kleiner Bereich", votes: 22 },
-      { text: "Nein, lieber für alle", votes: 11 }
-    ], 
-    totalVotes: 100 
+      { text: "Nein, lieber für alle", votes: 11 },
+    ],
+    totalVotes: 100,
   },
 ];
 
 const mockContributions: Contribution[] = [
-  { id: 1, eventId: 1, type: 'mitbringen', description: "Kuchen / Torte für 8 Personen", needed: 6, signedUp: 4 },
-  { id: 2, eventId: 1, type: 'mitbringen', description: "Salat oder Nudelsalat", needed: 4, signedUp: 2 },
-  { id: 3, eventId: 1, type: 'helfen', description: "Grill bedienen (14–17 Uhr)", needed: 3, signedUp: 3 },
-  { id: 4, eventId: 1, type: 'helfen', description: "Aufbau am Freitagabend", needed: 8, signedUp: 5 },
+  { id: '1', eventId: '1', type: 'mitbringen', description: "Kuchen / Torte für 8 Personen", needed: 6, signedUp: 4 },
+  { id: '2', eventId: '1', type: 'mitbringen', description: "Salat oder Nudelsalat", needed: 4, signedUp: 2 },
+  { id: '3', eventId: '1', type: 'helfen', description: "Grill bedienen (14–17 Uhr)", needed: 3, signedUp: 3 },
+  { id: '4', eventId: '1', type: 'helfen', description: "Aufbau am Freitagabend", needed: 8, signedUp: 5 },
+];
+
+const mockHelpRequests: HelpRequest[] = [
+  {
+    id: 'demo-1',
+    userId: '00000000-0000-0000-0000-000000000000',
+    kind: 'need',
+    title: 'Fahrdienst zur Arztpraxis',
+    description: 'Kurzfristig gesucht: Mitfahrt am Donnerstag vormittag.',
+    category: 'Fahrdienst',
+    status: 'open',
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: 'demo-2',
+    userId: '00000000-0000-0000-0000-000000000000',
+    kind: 'offer',
+    title: 'Einkaufshilfe für Nachbar:innen',
+    description: 'Ich gehe regelmäßig zum REWE – kann kleine Einkäufe mitnehmen.',
+    category: 'Einkauf',
+    status: 'open',
+    createdAt: new Date().toISOString(),
+  },
 ];
 
 export default function FrauenweilerDorfApp() {
@@ -106,14 +106,34 @@ export default function FrauenweilerDorfApp() {
   const [news, setNews] = useState(mockNews);
   const [polls, setPolls] = useState(mockPolls);
   const [contributions, setContributions] = useState(mockContributions);
+  const [helpRequests, setHelpRequests] = useState<HelpRequest[]>([]);
+  const [helpFilter, setHelpFilter] = useState<'all' | 'need' | 'offer'>('all');
+  const [showNewHelpModal, setShowNewHelpModal] = useState(false);
+  const [newHelp, setNewHelp] = useState({
+    kind: 'need' as 'need' | 'offer',
+    title: '',
+    description: '',
+    category: 'Sonstiges',
+  });
+  const [savingHelp, setSavingHelp] = useState(false);
+  const [dataLoading, setDataLoading] = useState(false);
 
-  const [selectedEventForContrib, setSelectedEventForContrib] = useState<number | null>(null);
+  const [selectedEventForContrib, setSelectedEventForContrib] = useState<string | null>(null);
   const [showLogin, setShowLogin] = useState(false);
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [loginName, setLoginName] = useState('');
   const [isRegisterMode, setIsRegisterMode] = useState(false);
   const [isLoadingAuth, setIsLoadingAuth] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [profileCreatedAt, setProfileCreatedAt] = useState<string | null>(null);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState(false);
+  const [displayNameDraft, setDisplayNameDraft] = useState('');
+  const [savingName, setSavingName] = useState(false);
+  const [sendingReset, setSendingReset] = useState(false);
+  const [activityCounts, setActivityCounts] = useState<{ contributions: number; pollVotes: number } | null>(null);
 
   // Admin form states
   const [newNews, setNewNews] = useState({ title: '', content: '', category: 'Allgemein', important: false });
@@ -123,37 +143,120 @@ export default function FrauenweilerDorfApp() {
 
   const useSupabase = isSupabaseConfigured();
 
+  const refreshVillageData = useCallback(async () => {
+    if (!useSupabase) return;
+    setDataLoading(true);
+    try {
+      const pack = await loadVillageDataFromSupabase();
+      if (!pack) return;
+      if (pack.events.length > 0) setEvents(pack.events);
+      if (pack.news.length > 0) setNews(pack.news);
+      setContributions(pack.contributions);
+      setHelpRequests(pack.help);
+    } finally {
+      setDataLoading(false);
+    }
+  }, [useSupabase]);
+
+  useEffect(() => {
+    if (!useSupabase) {
+      setHelpRequests(mockHelpRequests);
+      return;
+    }
+    void refreshVillageData();
+  }, [useSupabase, refreshVillageData]);
+
+  const applySessionUser = React.useCallback(async (sessionUser: { id: string; email?: string | null }) => {
+    setUserId(sessionUser.id);
+    setUserEmail(sessionUser.email ?? null);
+    if (!useSupabase) {
+      setUserName(sessionUser.email?.split('@')[0] || 'Bewohner');
+      setIsAdmin(false);
+      setProfileCreatedAt(null);
+      setAvatarUrl(null);
+      return;
+    }
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('name, is_admin, created_at, avatar_url')
+      .eq('id', sessionUser.id)
+      .single();
+
+    if (profile) {
+      setUserName(profile.name || sessionUser.email?.split('@')[0] || 'Bewohner');
+      setIsAdmin(!!profile.is_admin);
+      setProfileCreatedAt(profile.created_at ?? null);
+      setAvatarUrl(profile.avatar_url ?? null);
+    } else {
+      setUserName(sessionUser.email?.split('@')[0] || 'Bewohner');
+      setIsAdmin(false);
+      setProfileCreatedAt(null);
+      setAvatarUrl(null);
+    }
+  }, [useSupabase]);
+
+  const clearSessionUser = React.useCallback(() => {
+    setIsLoggedIn(false);
+    setUserId(null);
+    setUserEmail(null);
+    setIsAdmin(false);
+    setUserName('Gast');
+    setProfileCreatedAt(null);
+    setAvatarUrl(null);
+    setActivityCounts(null);
+    setEditingName(false);
+    setDisplayNameDraft('');
+  }, []);
+
   // ============================================
   // SUPABASE AUTH + REALTIME
   // ============================================
   useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!useSupabase || !userId) {
+      setActivityCounts(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const [signups, votes] = await Promise.all([
+        supabase.from('contribution_signups').select('id', { count: 'exact', head: true }).eq('user_id', userId),
+        supabase.from('poll_votes').select('id', { count: 'exact', head: true }).eq('user_id', userId),
+      ]);
+      if (!cancelled) {
+        setActivityCounts({
+          contributions: signups.count ?? 0,
+          pollVotes: votes.count ?? 0,
+        });
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [userId, useSupabase]);
+
+  useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (session?.user) {
         setIsLoggedIn(true);
-        setUserId(session.user.id);
-
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('name, is_admin')
-          .eq('id', session.user.id)
-          .single();
-
-        if (profile) {
-          setUserName(profile.name || session.user.email?.split('@')[0] || 'Bewohner');
-          setIsAdmin(!!profile.is_admin);
-        } else {
-          setUserName(session.user.email?.split('@')[0] || 'Bewohner');
-        }
+        await applySessionUser(session.user);
       } else {
-        setIsLoggedIn(false);
-        setUserId(null);
-        setIsAdmin(false);
-        setUserName('Gast');
+        clearSessionUser();
+      }
+    });
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        setIsLoggedIn(true);
+        void applySessionUser(session.user);
       }
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [applySessionUser, clearSessionUser]);
 
   // Realtime for live poll updates
   useEffect(() => {
@@ -179,7 +282,7 @@ export default function FrauenweilerDorfApp() {
   };
 
   /** Von Terminen: Mitmachen-Tab mit gewähltem Event; Gast bekommt sofort Login-Hinweis. */
-  const openContributeForEvent = (eventId: number) => {
+  const openContributeForEvent = (eventId: string) => {
     setSelectedEventForContrib(eventId);
     setActiveTab('contribute');
     if (!isLoggedIn) {
@@ -188,7 +291,7 @@ export default function FrauenweilerDorfApp() {
   };
 
   // --- Actions ---
-  const handleRSVP = (eventId: number) => {
+  const handleRSVP = (eventId: string) => {
     if (!isLoggedIn) {
       promptLogin('Mit einem Konto kannst du deine Teilnahme am Termin festhalten.');
       return;
@@ -201,7 +304,7 @@ export default function FrauenweilerDorfApp() {
     });
   };
 
-  const handleVote = (pollId: number, optionIndex: number) => {
+  const handleVote = (pollId: string, optionIndex: number) => {
     if (!isLoggedIn) {
       promptLogin('Nur angemeldete Bewohnerinnen und Bewohner können abstimmen.');
       return;
@@ -225,9 +328,27 @@ export default function FrauenweilerDorfApp() {
     });
   };
 
-  const handleSignUpContribution = (contribId: number) => {
+  const handleSignUpContribution = async (contribId: string) => {
     if (!isLoggedIn) {
       promptLogin('Zum Eintragen bei Mitbring- oder Helfer-Aufgaben ist ein Konto nötig.');
+      return;
+    }
+    if (useSupabase && userId) {
+      const { error } = await supabase.from('contribution_signups').insert({
+        contribution_id: contribId,
+        user_id: userId,
+        user_name: userName,
+      });
+      if (error) {
+        if (error.message.includes('duplicate') || error.code === '23505') {
+          toast.message('Bereits eingetragen', { description: 'Du bist für diese Aufgabe schon vorgemerkt.' });
+        } else {
+          toast.error('Eintragen fehlgeschlagen', { description: error.message });
+        }
+        return;
+      }
+      toast.success('Vielen Dank!', { description: 'Du wurdest eingetragen.' });
+      await refreshVillageData();
       return;
     }
     setContributions(prev => prev.map(c => {
@@ -239,6 +360,72 @@ export default function FrauenweilerDorfApp() {
     toast.success('Vielen Dank!', { 
       description: 'Du wurdest eingetragen. Wir freuen uns auf deine Hilfe!' 
     });
+  };
+
+  const submitNewHelp = async () => {
+    if (!isLoggedIn || !userId) {
+      promptLogin('Zum Veröffentlichen eines Gesuchs oder Angebots bitte anmelden.');
+      return;
+    }
+    if (!newHelp.title.trim() || !newHelp.description.trim()) {
+      toast.error('Bitte Titel und Beschreibung ausfüllen');
+      return;
+    }
+    setSavingHelp(true);
+    try {
+      if (useSupabase) {
+        const { error } = await supabase.from('help_requests').insert({
+          user_id: userId,
+          kind: newHelp.kind,
+          title: newHelp.title.trim(),
+          description: newHelp.description.trim(),
+          category: newHelp.category,
+        });
+        if (error) throw error;
+        toast.success('Eintrag veröffentlicht');
+        setShowNewHelpModal(false);
+        setNewHelp({ kind: 'need', title: '', description: '', category: 'Sonstiges' });
+        await refreshVillageData();
+      } else {
+        const local: HelpRequest = {
+          id: `local-${Date.now()}`,
+          userId,
+          kind: newHelp.kind,
+          title: newHelp.title.trim(),
+          description: newHelp.description.trim(),
+          category: newHelp.category,
+          status: 'open',
+          createdAt: new Date().toISOString(),
+        };
+        setHelpRequests((prev) => [local, ...prev]);
+        toast.success('Eintrag hinzugefügt', { description: 'Nur lokal im Demo-Modus.' });
+        setShowNewHelpModal(false);
+        setNewHelp({ kind: 'need', title: '', description: '', category: 'Sonstiges' });
+      }
+    } catch (e: unknown) {
+      toast.error('Speichern fehlgeschlagen', {
+        description: e instanceof Error ? e.message : String(e),
+      });
+    } finally {
+      setSavingHelp(false);
+    }
+  };
+
+  const setHelpStatus = async (id: string, status: 'done' | 'cancelled') => {
+    if (useSupabase) {
+      const { error } = await supabase
+        .from('help_requests')
+        .update({ status, updated_at: new Date().toISOString() })
+        .eq('id', id);
+      if (error) {
+        toast.error('Aktualisierung fehlgeschlagen', { description: error.message });
+        return;
+      }
+      await refreshVillageData();
+    } else {
+      setHelpRequests((prev) => prev.map((h) => (h.id === id ? { ...h, status } : h)));
+    }
+    toast.success(status === 'done' ? 'Als erledigt markiert' : 'Eintrag zurückgezogen');
   };
 
   const handleLogin = async () => {
@@ -289,6 +476,61 @@ export default function FrauenweilerDorfApp() {
     toast.info('Du wurdest abgemeldet.');
   };
 
+  const saveDisplayName = async () => {
+    const next = displayNameDraft.trim();
+    if (!next) {
+      toast.error('Bitte einen Namen eingeben');
+      return;
+    }
+    if (!userId) return;
+    if (!useSupabase) {
+      setUserName(next);
+      setEditingName(false);
+      toast.success('Name aktualisiert', { description: 'Nur lokal im Demo-Modus.' });
+      return;
+    }
+    setSavingName(true);
+    try {
+      const { error } = await supabase.from('profiles').update({ name: next }).eq('id', userId);
+      if (error) throw error;
+      setUserName(next);
+      setEditingName(false);
+      toast.success('Anzeigename gespeichert');
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      toast.error('Speichern fehlgeschlagen', { description: msg });
+    } finally {
+      setSavingName(false);
+    }
+  };
+
+  const sendPasswordReset = async () => {
+    if (!userEmail) {
+      toast.error('Keine E-Mail-Adresse für dieses Konto');
+      return;
+    }
+    if (!useSupabase) {
+      toast.message('Demo-Modus', { description: 'Passwort-Reset ist nur mit konfiguriertem Supabase möglich.' });
+      return;
+    }
+    setSendingReset(true);
+    try {
+      const origin = typeof window !== 'undefined' ? window.location.origin : '';
+      const { error } = await supabase.auth.resetPasswordForEmail(userEmail, {
+        redirectTo: origin ? `${origin}/` : undefined,
+      });
+      if (error) throw error;
+      toast.success('E-Mail zum Zurücksetzen wurde verschickt', {
+        description: 'Bitte Posteingang und Spam-Ordner prüfen.',
+      });
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      toast.error('Reset fehlgeschlagen', { description: msg });
+    } finally {
+      setSendingReset(false);
+    }
+  };
+
   // ============================================
   // ADMIN FUNCTIONS (create News, Event, Contribution)
   // ============================================
@@ -312,7 +554,7 @@ export default function FrauenweilerDorfApp() {
     } else {
       // Demo mode
       setNews(prev => [{
-        id: Date.now(),
+        id: String(Date.now()),
         title: newNews.title,
         content: newNews.content,
         category: newNews.category,
@@ -324,6 +566,7 @@ export default function FrauenweilerDorfApp() {
     toast.success('News erfolgreich erstellt!');
     setNewNews({ title: '', content: '', category: 'Allgemein', important: false });
     setShowAdminModal(false);
+    if (useSupabase) await refreshVillageData();
   };
 
   const createEvent = async () => {
@@ -350,7 +593,7 @@ export default function FrauenweilerDorfApp() {
       }
     } else {
       setEvents(prev => [...prev, {
-        id: Date.now(),
+        id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
         title: newEvent.title,
         date: newEvent.date,
         time: newEvent.time || '00:00',
@@ -364,6 +607,7 @@ export default function FrauenweilerDorfApp() {
     toast.success('Termin erfolgreich erstellt!');
     setNewEvent({ title: '', description: '', date: '', time: '', location: '', category: 'Fest' });
     setShowAdminModal(false);
+    if (useSupabase) await refreshVillageData();
   };
 
   const createContributionTask = async () => {
@@ -386,8 +630,8 @@ export default function FrauenweilerDorfApp() {
     } else {
       // Demo: add to local contributions
       setContributions(prev => [...prev, {
-        id: Date.now(),
-        eventId: parseInt(newContribution.eventId),
+        id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
+        eventId: newContribution.eventId,
         type: newContribution.type,
         description: newContribution.description,
         needed: newContribution.needed,
@@ -398,6 +642,7 @@ export default function FrauenweilerDorfApp() {
     toast.success('Mitbring-/Helfer-Aufgabe erfolgreich angelegt!');
     setNewContribution({ eventId: '', type: 'mitbringen', description: '', needed: 1 });
     setShowAdminModal(false);
+    if (useSupabase) await refreshVillageData();
   };
 
   // Image upload helper (for future use with Supabase Storage)
@@ -426,6 +671,22 @@ export default function FrauenweilerDorfApp() {
     : [];
 
   const selectedEvent = events.find(e => e.id === selectedEventForContrib);
+
+  const nextEventHighlight = useMemo(() => {
+    if (!events.length) return null;
+    const sorted = [...events].sort((a, b) => a.date.localeCompare(b.date));
+    const today = new Date().toISOString().split('T')[0];
+    return sorted.find((e) => e.date >= today) ?? sorted[sorted.length - 1];
+  }, [events]);
+
+  const homeNewsTeaser = useMemo(() => news.slice(0, 3), [news]);
+
+  const filteredHelp = useMemo(() => {
+    let rows = helpRequests.filter((h) => h.status === 'open');
+    if (helpFilter === 'need') rows = rows.filter((h) => h.kind === 'need');
+    if (helpFilter === 'offer') rows = rows.filter((h) => h.kind === 'offer');
+    return rows;
+  }, [helpRequests, helpFilter]);
 
   return (
     <div className="min-h-screen bg-zinc-50 pb-20">
@@ -470,73 +731,212 @@ export default function FrauenweilerDorfApp() {
           <div className="space-y-8">
             <div className="text-center pt-4">
               <div className="inline-flex items-center gap-2 bg-[#dcfce7] text-[#166534] px-4 py-1 rounded-full text-sm font-medium mb-3">
-                <MapPin className="w-4 h-4" /> Frauenweiler • Wiesloch
+                <MapPin className="w-4 h-4" /> Frauenweiler bei Wiesloch
               </div>
-              <h1 className="text-4xl font-semibold tracking-tighter">Hallo zusammen! 👋</h1>
-              <p className="text-[#64748b] mt-2">Willkommen in deiner DorfApp</p>
-            </div>
-
-            {/* Quick Actions */}
-            <div className="grid grid-cols-2 gap-3">
-              {[
-                { label: "Termine", icon: Calendar, tab: 'events' as Tab },
-                { label: "Umfragen", icon: Vote, tab: 'polls' as Tab },
-                { label: "News", icon: Bell, tab: 'news' as Tab },
-                { label: "Mitmachen", icon: Heart, tab: 'contribute' as Tab },
-              ].map((action, i) => (
-                <button 
-                  key={i}
-                  type="button"
-                  onClick={() => {
-                    setActiveTab(action.tab);
-                    if (!isLoggedIn && action.tab === 'contribute') {
-                      setSelectedEventForContrib(null);
-                      promptLogin('Wähle ein Event und melde dich an, um dich für Mitmach-Aktionen einzutragen.');
-                    }
-                  }}
-                  className="dorf-card p-5 flex flex-col items-center justify-center gap-3 active:scale-[0.985] transition-all"
+              <h1 className="text-4xl font-semibold tracking-tighter">DorfApp Frauenweiler</h1>
+              <p className="text-[#64748b] mt-2 max-w-md mx-auto text-sm leading-relaxed">
+                Termine, Nachbarschaftshilfe, Umfragen und Mitmachen – ergänzend zum{' '}
+                <a
+                  href="http://frauenweiler.org/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[#166534] font-medium underline underline-offset-2"
                 >
-                  <action.icon className="w-8 h-8 text-[#166534]" />
-                  <span className="font-semibold">{action.label}</span>
-                </button>
-              ))}
+                  Stadtteilverein Frauenweiler e.V.
+                </a>{' '}
+                und der Vereins-Website.
+              </p>
             </div>
 
-            {/* Upcoming Event Highlight */}
+            {dataLoading && (
+              <div className="flex justify-center py-1">
+                <Loader2 className="w-6 h-6 animate-spin text-[#166534]" aria-hidden />
+              </div>
+            )}
+
             <div>
-              <div className="flex items-center justify-between mb-3 px-1">
-                <h2 className="font-semibold text-lg">Nächster Termin</h2>
-                <button onClick={() => setActiveTab('events')} className="text-sm text-[#166534] font-medium">Alle ansehen →</button>
-              </div>
-              <div className="dorf-card p-5">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <div className="event-badge mb-2">FEST</div>
-                    <h3 className="font-semibold text-xl">Dorffest 2026</h3>
-                    <div className="flex items-center gap-2 text-sm text-[#64748b] mt-1">
-                      <Clock className="w-4 h-4" /> 14. Juni • 14:00 Uhr
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-[#64748b]">
-                      <MapPin className="w-4 h-4" /> Dorfplatz
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-3xl font-semibold text-[#166534]">{events[0].attendees}</div>
-                    <div className="text-xs text-[#64748b]">kommen mit</div>
-                  </div>
-                </div>
-                <button 
-                  type="button"
-                  onClick={() => handleRSVP(1)} 
-                  className={`dorf-button w-full mt-5 justify-center ${!isLoggedIn ? 'ring-2 ring-amber-200' : ''}`}
+              <h2 className="text-xs font-semibold uppercase tracking-wider text-[#64748b] mb-2 px-1">
+                Schnellzugriff
+              </h2>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {(
+                  [
+                    { label: 'Termine', icon: Calendar, tab: 'events' as Tab },
+                    { label: 'News', icon: Bell, tab: 'news' as Tab },
+                    { label: 'Umfragen', icon: Vote, tab: 'polls' as Tab },
+                    { label: 'Mitmachen', icon: Heart, tab: 'contribute' as Tab },
+                    { label: 'Hilfe', icon: Handshake, tab: 'help' as Tab },
+                  ] as const
+                ).map((action) => (
+                  <button
+                    key={action.tab}
+                    type="button"
+                    onClick={() => {
+                      setActiveTab(action.tab);
+                      if (!isLoggedIn && action.tab === 'contribute') {
+                        setSelectedEventForContrib(null);
+                        promptLogin('Wähle ein Event und melde dich an, um dich für Mitmach-Aktionen einzutragen.');
+                      }
+                    }}
+                    className="dorf-card p-5 flex flex-col items-center justify-center gap-3 active:scale-[0.985] transition-all"
+                  >
+                    <action.icon className="w-8 h-8 text-[#166534]" />
+                    <span className="font-semibold text-sm text-center">{action.label}</span>
+                  </button>
+                ))}
+                <a
+                  href="http://frauenweiler.org/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="dorf-card p-5 flex flex-col items-center justify-center gap-3 border-2 border-dashed border-[#166534]/30 hover:bg-[#f0fdf4] transition-colors"
                 >
-                  <Check className="w-4 h-4" /> {!isLoggedIn ? 'Anmelden zum Zusagen' : 'Ich komme mit!'}
-                </button>
-                {!isLoggedIn && (
-                  <p className="text-xs text-center text-[#64748b] mt-2 px-1">
-                    Die Teilnahme am Termin wird erst nach Anmeldung gezählt.
+                  <ExternalLink className="w-8 h-8 text-[#166534]" />
+                  <span className="font-semibold text-sm text-center text-[#166534]">Vereins-Website</span>
+                </a>
+              </div>
+            </div>
+
+            <div>
+              <h2 className="text-xs font-semibold uppercase tracking-wider text-[#64748b] mb-2 px-1">
+                Dorf & Projekte (extern)
+              </h2>
+              <p className="text-xs text-[#64748b] mb-3 px-1">
+                Kerwe, FW hilft, Hofflohmarkt, Geschichte und mehr – auf der Website des Stadtteilvereins.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {['Kerwe & Feste', 'FW hilft', 'Projekte', 'Kontakt'].map((label) => (
+                  <a
+                    key={label}
+                    href="http://frauenweiler.org/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-full bg-white border border-zinc-200 text-[#166534] hover:bg-[#f0fdf4]"
+                  >
+                    <ExternalLink className="w-3 h-3 shrink-0" />
+                    {label}
+                  </a>
+                ))}
+              </div>
+            </div>
+
+            {nextEventHighlight && (
+              <div>
+                <div className="flex items-center justify-between mb-3 px-1">
+                  <h2 className="font-semibold text-lg">Nächster Termin</h2>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('events')}
+                    className="text-sm text-[#166534] font-medium"
+                  >
+                    Alle ansehen →
+                  </button>
+                </div>
+                <div className="dorf-card p-5 overflow-hidden">
+                  {nextEventHighlight.image_url && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={nextEventHighlight.image_url}
+                      alt=""
+                      className="w-full h-36 object-cover rounded-xl mb-4 -mt-1"
+                    />
+                  )}
+                  <div className="flex justify-between items-start gap-3">
+                    <div className="min-w-0">
+                      <div className="event-badge mb-2">{nextEventHighlight.category}</div>
+                      <h3 className="font-semibold text-xl">{nextEventHighlight.title}</h3>
+                      <div className="flex items-center gap-2 text-sm text-[#64748b] mt-1">
+                        <Clock className="w-4 h-4 shrink-0" />
+                        {format(new Date(nextEventHighlight.date), 'EEEE, d. MMMM yyyy', { locale: de })} ·{' '}
+                        {nextEventHighlight.time || '?'} Uhr
+                      </div>
+                      <div className="flex items-center gap-2 text-sm text-[#64748b]">
+                        <MapPin className="w-4 h-4 shrink-0" />
+                        {nextEventHighlight.location}
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <div className="text-3xl font-semibold text-[#166534]">{nextEventHighlight.attendees}</div>
+                      <div className="text-xs text-[#64748b]">dabei</div>
+                    </div>
+                  </div>
+                  <p className="text-sm text-[#475569] mt-3 line-clamp-3">{nextEventHighlight.description}</p>
+                  <button
+                    type="button"
+                    onClick={() => handleRSVP(nextEventHighlight.id)}
+                    className={`dorf-button w-full mt-5 justify-center ${!isLoggedIn ? 'ring-2 ring-amber-200' : ''}`}
+                  >
+                    <Check className="w-4 h-4" /> {!isLoggedIn ? 'Anmelden zum Zusagen' : 'Ich komme mit!'}
+                  </button>
+                  {!isLoggedIn && (
+                    <p className="text-xs text-center text-[#64748b] mt-2 px-1">
+                      Die Teilnahme wird erst nach Anmeldung gezählt.
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {homeNewsTeaser.length > 0 && (
+              <div>
+                <div className="flex items-center justify-between mb-3 px-1">
+                  <h2 className="font-semibold text-lg">Aktuelles</h2>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('news')}
+                    className="text-sm text-[#166534] font-medium"
+                  >
+                    Alle News →
+                  </button>
+                </div>
+                <div className="space-y-3">
+                  {homeNewsTeaser.map((item) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => setActiveTab('news')}
+                      className="dorf-card w-full p-4 text-left hover:border-[#166534]/40 transition-colors"
+                    >
+                      {item.important && (
+                        <div className="text-xs font-bold text-amber-600 mb-1">WICHTIG</div>
+                      )}
+                      <div className="font-semibold text-[#0f172a]">{item.title}</div>
+                      <p className="text-sm text-[#64748b] mt-1 line-clamp-2">{item.content}</p>
+                      <div className="text-xs text-[#94a3b8] mt-2">
+                        {item.date} · {item.category}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="rounded-2xl border border-[#166534]/25 bg-gradient-to-br from-[#f0fdf4] to-white p-5 shadow-sm">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h3 className="font-semibold text-lg text-[#14532d] flex items-center gap-2">
+                    <Handshake className="w-5 h-5" />
+                    Frauenweiler hilft
+                  </h3>
+                  <p className="text-sm text-[#64748b] mt-1 max-w-prose">
+                    Kurzfristige Hilfe suchen oder anbieten – ergänzend zum Projekt{' '}
+                    <a
+                      href="http://frauenweiler.org/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[#166534] underline"
+                    >
+                      FW hilft
+                    </a>{' '}
+                    auf der Vereins-Website.
                   </p>
-                )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('help')}
+                  className="dorf-button shrink-0 justify-center px-6"
+                >
+                  Zur Hilfe-Liste
+                </button>
               </div>
             </div>
           </div>
@@ -753,6 +1153,119 @@ export default function FrauenweilerDorfApp() {
           </div>
         )}
 
+        {/* HILFE / FRAUENWEILER HILFT */}
+        {activeTab === 'help' && (
+          <div>
+            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-6">
+              <div>
+                <h2 className="text-2xl font-semibold">Frauenweiler hilft</h2>
+                <p className="text-[#64748b] text-sm mt-1 max-w-prose">
+                  Gesuch oder Hilfsangebot – sichtbar für alle im Dorf. Mehr Hintergrund zum Vereinsprojekt{' '}
+                  <a
+                    href="http://frauenweiler.org/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[#166534] underline"
+                  >
+                    FW hilft
+                  </a>
+                  .
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  if (!isLoggedIn) {
+                    promptLogin('Zum Erstellen eines Eintrags bitte anmelden.');
+                    return;
+                  }
+                  setShowNewHelpModal(true);
+                }}
+                className="dorf-button shrink-0 justify-center text-sm px-4 py-2.5"
+              >
+                <Plus className="w-4 h-4" /> Neuer Eintrag
+              </button>
+            </div>
+
+            <div className="flex flex-wrap gap-2 mb-6">
+              {(['all', 'need', 'offer'] as const).map((f) => (
+                <button
+                  key={f}
+                  type="button"
+                  onClick={() => setHelpFilter(f)}
+                  className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                    helpFilter === f
+                      ? 'bg-[#166534] text-white'
+                      : 'bg-zinc-100 text-[#64748b] hover:bg-zinc-200'
+                  }`}
+                >
+                  {f === 'all' ? 'Alle' : f === 'need' ? 'Gesuche' : 'Angebote'}
+                </button>
+              ))}
+            </div>
+
+            <div className="space-y-4">
+              {filteredHelp.length === 0 ? (
+                <p className="text-center text-[#64748b] py-12">
+                  Noch keine offenen Einträge. {isLoggedIn ? 'Lege den ersten an!' : 'Melde dich an, um zu helfen.'}
+                </p>
+              ) : (
+                filteredHelp.map((h) => {
+                  const isMine = isLoggedIn && userId === h.userId;
+                  return (
+                    <div key={h.id} className="dorf-card p-5">
+                      <div className="flex justify-between items-start gap-3">
+                        <span
+                          className={`text-xs font-bold px-2 py-0.5 rounded-full shrink-0 ${
+                            h.kind === 'need' ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'
+                          }`}
+                        >
+                          {h.kind === 'need' ? 'GESUCHT' : 'ANGEBOT'}
+                        </span>
+                        <span className="text-xs text-[#94a3b8] text-right">
+                          {mounted
+                            ? format(new Date(h.createdAt), 'd. MMM · HH:mm', { locale: de })
+                            : ''}
+                        </span>
+                      </div>
+                      <h3 className="font-semibold text-lg mt-2">{h.title}</h3>
+                      <p className="text-sm text-[#64748b] mt-1 whitespace-pre-wrap">{h.description}</p>
+                      <div className="text-xs text-[#94a3b8] mt-2">Kategorie: {h.category}</div>
+                      {isMine && (
+                        <div className="flex gap-2 mt-4">
+                          <button
+                            type="button"
+                            onClick={() => void setHelpStatus(h.id, 'done')}
+                            className="text-sm px-4 py-2 rounded-xl bg-[#166534] text-white font-medium"
+                          >
+                            Erledigt
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => void setHelpStatus(h.id, 'cancelled')}
+                            className="text-sm px-4 py-2 rounded-xl border border-zinc-200 text-[#64748b]"
+                          >
+                            Zurückziehen
+                          </button>
+                        </div>
+                      )}
+                      {isAdmin && !isMine && (
+                        <button
+                          type="button"
+                          onClick={() => void setHelpStatus(h.id, 'done')}
+                          className="mt-4 text-sm text-[#166534] font-medium"
+                        >
+                          Als Admin schließen
+                        </button>
+                      )}
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        )}
+
         {/* PROFILE TAB */}
         {activeTab === 'profile' && (
           <div className="max-w-md mx-auto">
@@ -774,6 +1287,7 @@ export default function FrauenweilerDorfApp() {
                     <li>„Ich komme mit“ bei Terminen bestätigen</li>
                     <li>an Dorf-Umfragen teilnehmen</li>
                     <li>dich bei Mitbring- und Helfer-Aktionen eintragen</li>
+                    <li>Gesuche & Hilfsangebote unter „Hilfe“ (Frauenweiler hilft)</li>
                     <li>persönliche Bereiche nutzen, sobald sie freigeschaltet sind</li>
                   </ul>
                 </div>
@@ -788,52 +1302,199 @@ export default function FrauenweilerDorfApp() {
               </>
             ) : (
               <>
-                <div className="text-center mb-8">
-                  <div className="w-20 h-20 bg-[#166534] rounded-full mx-auto flex items-center justify-center text-white text-3xl font-semibold mb-4">
-                    {userName.split(' ').map(n => n[0]).join('')}
+                <div className="text-center mb-6">
+                  <div className="relative w-24 h-24 mx-auto mb-4">
+                    {avatarUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element -- dynamische Supabase-URL
+                      <img
+                        src={avatarUrl}
+                        alt=""
+                        className="w-full h-full rounded-full object-cover border-4 border-white shadow-md"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-[#166534] rounded-full flex items-center justify-center text-white text-2xl font-semibold shadow-md">
+                        {(userName.split(/\s+/).filter(Boolean).map((n) => n[0]).join('').slice(0, 2).toUpperCase()) || '?'}
+                      </div>
+                    )}
                   </div>
-                  <h2 className="text-2xl font-semibold">{userName}</h2>
-                  <p className="text-[#64748b]">Mitglied • Frauenweiler</p>
+                  <h2 className="text-2xl font-semibold tracking-tight">{userName}</h2>
+                  <p className="text-sm text-[#64748b] mt-1">
+                    {isAdmin ? 'Administrator · DorfApp' : 'Mitglied · DorfApp Frauenweiler'}
+                  </p>
                 </div>
 
-                <div className="dorf-card p-6 space-y-4">
-                  <div className="flex justify-between py-1">
-                    <span>Angemeldet seit</span>
-                    <span className="font-mono text-sm">März 2025</span>
+                <div className="mb-5">
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-[#64748b] mb-2 px-1">
+                    Persönliche Daten
+                  </h3>
+                  <div className="dorf-card p-5 space-y-4">
+                    <div>
+                      <div className="text-xs text-[#94a3b8] mb-1">E-Mail</div>
+                      <div className="flex items-start gap-2 text-sm text-[#0f172a]">
+                        <Mail className="w-4 h-4 text-[#64748b] shrink-0 mt-0.5" />
+                        <span className="break-all">{userEmail ?? '—'}</span>
+                      </div>
+                      <p className="text-xs text-[#94a3b8] mt-2">
+                        Die Anmeldung läuft über diese Adresse. Änderungen nur über den Supabase-Auth-Flow (Passwort zurücksetzen).
+                      </p>
+                    </div>
+
+                    <div className="border-t border-zinc-100 pt-4">
+                      <div className="flex items-center justify-between gap-2 mb-2">
+                        <span className="text-xs text-[#94a3b8]">Anzeigename</span>
+                        {!editingName && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setDisplayNameDraft(userName);
+                              setEditingName(true);
+                            }}
+                            className="text-xs font-medium text-[#166534] inline-flex items-center gap-1 hover:underline"
+                          >
+                            <Pencil className="w-3.5 h-3.5" /> Bearbeiten
+                          </button>
+                        )}
+                      </div>
+                      {editingName ? (
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                          <input
+                            type="text"
+                            value={displayNameDraft}
+                            onChange={(e) => setDisplayNameDraft(e.target.value)}
+                            className="flex-1 border border-zinc-200 rounded-xl px-3 py-2.5 text-sm"
+                            placeholder="Vor- und Nachname"
+                            maxLength={120}
+                          />
+                          <div className="flex gap-2 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => void saveDisplayName()}
+                              disabled={savingName}
+                              className="dorf-button text-sm py-2.5 px-4 justify-center disabled:opacity-60"
+                            >
+                              {savingName ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <Save className="w-4 h-4" />
+                              )}
+                              Speichern
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setEditingName(false)}
+                              className="text-sm px-4 py-2.5 rounded-xl border border-zinc-200 text-[#64748b] hover:bg-zinc-50"
+                            >
+                              Abbrechen
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="font-medium text-[#0f172a]">{userName}</p>
+                      )}
+                    </div>
+
+                    <div className="border-t border-zinc-100 pt-4 flex justify-between gap-4 text-sm">
+                      <span className="text-[#64748b] shrink-0">Profil seit</span>
+                      <span className="font-mono text-right text-[#0f172a]">
+                        {mounted && profileCreatedAt
+                          ? format(new Date(profileCreatedAt), 'd. MMMM yyyy', { locale: de })
+                          : '—'}
+                      </span>
+                    </div>
+
+                    {!useSupabase && (
+                      <p className="text-xs text-amber-800 bg-amber-50 border border-amber-100 rounded-xl p-3">
+                        Demo-Modus: Sobald Supabase in <span className="font-mono">.env.local</span> konfiguriert ist, erscheinen echte Profildaten und Aktivität.
+                      </p>
+                    )}
                   </div>
-                  <div className="flex justify-between py-1 border-t">
-                    <span>Teilnahmen</span>
-                    <span className="font-semibold">7</span>
+                </div>
+
+                <div className="mb-5">
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-[#64748b] mb-2 px-1">
+                    Aktivität
+                  </h3>
+                  <div className="dorf-card p-5 space-y-3 text-sm">
+                    {useSupabase && userId && activityCounts === null ? (
+                      <div className="flex justify-center py-6 text-[#64748b]">
+                        <Loader2 className="w-6 h-6 animate-spin text-[#166534]" aria-hidden />
+                      </div>
+                    ) : useSupabase && activityCounts ? (
+                      <>
+                        <div className="flex justify-between gap-4">
+                          <span className="text-[#64748b]">Mitmach-Einträge</span>
+                          <span className="font-semibold tabular-nums">{activityCounts.contributions}</span>
+                        </div>
+                        <div className="flex justify-between gap-4 border-t border-zinc-100 pt-3">
+                          <span className="text-[#64748b]">Umfragen (abgestimmt)</span>
+                          <span className="font-semibold tabular-nums">{activityCounts.pollVotes}</span>
+                        </div>
+                      </>
+                    ) : (
+                      <p className="text-[#64748b] text-sm leading-relaxed">
+                        {useSupabase
+                          ? 'Noch keine Aktivität in der Datenbank – oder Daten werden geladen.'
+                          : 'Mit konfiguriertem Supabase werden Mitmach-Einträge und abgegebene Stimmen aus deinem Konto gezählt.'}
+                      </p>
+                    )}
                   </div>
-                  <div className="flex justify-between py-1 border-t">
-                    <span>Helferstunden</span>
-                    <span className="font-semibold">14 Std</span>
+                </div>
+
+                <div className="mb-5">
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-[#64748b] mb-2 px-1">
+                    Konto &amp; Sicherheit
+                  </h3>
+                  <div className="dorf-card p-5 space-y-3">
+                    <button
+                      type="button"
+                      onClick={() => void sendPasswordReset()}
+                      disabled={sendingReset || !userEmail}
+                      className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl border border-zinc-200 text-sm font-medium text-[#0f172a] hover:bg-zinc-50 disabled:opacity-50"
+                    >
+                      {sendingReset ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <KeyRound className="w-4 h-4 text-[#166534]" />
+                      )}
+                      Passwort zurücksetzen (E-Mail)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void handleLogout()}
+                      className="w-full py-3.5 text-red-600 font-medium border border-red-200 rounded-2xl hover:bg-red-50 text-sm"
+                    >
+                      Abmelden
+                    </button>
                   </div>
+                </div>
+
+                <div className="text-xs text-[#64748b] leading-relaxed space-y-2 px-1 mb-6 border border-zinc-100 rounded-2xl p-4 bg-zinc-50/80">
+                  <p className="font-medium text-[#475569]">Datenschutz &amp; Kontoende</p>
+                  <p>
+                    Eine vollständige Selbstbedienung zum Löschen des Kontos ist in dieser App noch nicht eingebaut.
+                    Wende dich für Auskunft oder Löschwünsche bitte an die Betreuung der DorfApp bzw. den Ortschaftsrat.
+                  </p>
                 </div>
 
                 {isAdmin && (
-                  <div className="mt-6">
-                    <button 
+                  <div className="mb-6">
+                    <h3 className="text-xs font-semibold uppercase tracking-wider text-[#64748b] mb-2 px-1">
+                      Verwaltung
+                    </h3>
+                    <button
                       type="button"
                       onClick={() => setShowAdminModal(true)}
-                      className="w-full flex items-center justify-center gap-2 py-3 bg-[#166534] text-white rounded-2xl font-medium hover:bg-[#14532d]"
+                      className="w-full flex items-center justify-center gap-2 py-3 bg-[#166534] text-white rounded-2xl font-medium hover:bg-[#14532d] text-sm"
                     >
                       <Shield className="w-4 h-4" /> Admin-Bereich öffnen
                     </button>
-                    <div className="mt-3 p-4 bg-[#fefce8] border border-yellow-200 rounded-2xl text-sm">
-                      <strong>Admin-Modus aktiv</strong><br />
+                    <div className="mt-3 p-4 bg-[#fefce8] border border-yellow-200 rounded-2xl text-sm text-[#713f12]">
+                      <strong>Admin-Modus aktiv</strong>
+                      <br />
                       Du kannst News, Termine und Mitbring-/Helfer-Aufgaben anlegen.
                     </div>
                   </div>
                 )}
-
-                <button 
-                  type="button"
-                  onClick={handleLogout}
-                  className="mt-8 w-full py-4 text-red-600 font-medium border border-red-200 rounded-2xl hover:bg-red-50"
-                >
-                  Abmelden
-                </button>
               </>
             )}
           </div>
@@ -841,31 +1502,118 @@ export default function FrauenweilerDorfApp() {
       </main>
 
       {/* Bottom Navigation (PWA Style) */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t z-50">
-        <div className="max-w-2xl mx-auto grid grid-cols-6 text-center text-xs">
-          {[
-            { id: 'home', label: 'Start', icon: Home },
-            { id: 'news', label: 'News', icon: Bell },
-            { id: 'events', label: 'Termine', icon: Calendar },
-            { id: 'polls', label: 'Abstimmen', icon: Vote },
-            { id: 'contribute', label: 'Mitmachen', icon: Heart },
-            { id: 'profile', label: 'Profil', icon: User },
-          ].map(item => {
+      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t z-50 safe-area-pb">
+        <div className="max-w-2xl mx-auto flex overflow-x-auto gap-0.5 px-1 py-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+          {(
+            [
+              { id: 'home', label: 'Start', icon: Home },
+              { id: 'news', label: 'News', icon: Bell },
+              { id: 'events', label: 'Termine', icon: Calendar },
+              { id: 'polls', label: 'Abstimmen', icon: Vote },
+              { id: 'contribute', label: 'Mitmachen', icon: Heart },
+              { id: 'help', label: 'Hilfe', icon: Handshake },
+              { id: 'profile', label: 'Profil', icon: User },
+            ] as const
+          ).map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
             return (
               <button
                 key={item.id}
-                onClick={() => setActiveTab(item.id as Tab)}
-                className={`nav-item py-3 ${isActive ? 'active' : 'text-[#64748b]'}`}
+                type="button"
+                onClick={() => {
+                  setActiveTab(item.id as Tab);
+                  if (!isLoggedIn && item.id === 'contribute') {
+                    setSelectedEventForContrib(null);
+                    promptLogin('Wähle ein Event und melde dich an, um dich für Mitmach-Aktionen einzutragen.');
+                  }
+                }}
+                className={`nav-item min-w-[3.65rem] shrink-0 py-2.5 px-0.5 ${isActive ? 'active' : 'text-[#64748b]'}`}
               >
-                <Icon className="w-5 h-5" />
-                <span>{item.label}</span>
+                <Icon className="w-5 h-5 mx-auto" />
+                <span className="text-[10px] leading-tight mt-0.5 block">{item.label}</span>
               </button>
             );
           })}
         </div>
       </nav>
+
+      {/* Neuer Hilfe-Eintrag */}
+      {showNewHelpModal && (
+        <div className="fixed inset-0 bg-black/60 flex items-end sm:items-center justify-center z-[100]">
+          <div className="bg-white w-full sm:w-[440px] rounded-t-3xl sm:rounded-3xl p-8 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-semibold flex items-center gap-2">
+                <Handshake className="w-6 h-6 text-[#166534]" /> Neuer Eintrag
+              </h3>
+              <button type="button" onClick={() => setShowNewHelpModal(false)} className="text-2xl text-[#64748b]">
+                ×
+              </button>
+            </div>
+            <div className="space-y-4">
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setNewHelp((n) => ({ ...n, kind: 'need' }))}
+                  className={`flex-1 py-3 rounded-2xl text-sm font-semibold border ${
+                    newHelp.kind === 'need' ? 'bg-[#166534] text-white border-[#166534]' : 'border-zinc-200'
+                  }`}
+                >
+                  Gesuch
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setNewHelp((n) => ({ ...n, kind: 'offer' }))}
+                  className={`flex-1 py-3 rounded-2xl text-sm font-semibold border ${
+                    newHelp.kind === 'offer' ? 'bg-[#166534] text-white border-[#166534]' : 'border-zinc-200'
+                  }`}
+                >
+                  Angebot
+                </button>
+              </div>
+              <select
+                value={newHelp.category}
+                onChange={(e) => setNewHelp((n) => ({ ...n, category: e.target.value }))}
+                className="w-full border rounded-2xl px-4 py-3 text-sm"
+              >
+                {['Sonstiges', 'Fahrdienst', 'Einkauf', 'Garten', 'Technik', 'Kinder', 'Tier'].map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+              <input
+                type="text"
+                placeholder="Kurztitel"
+                value={newHelp.title}
+                onChange={(e) => setNewHelp((n) => ({ ...n, title: e.target.value }))}
+                className="w-full border rounded-2xl px-4 py-3"
+                maxLength={120}
+              />
+              <textarea
+                placeholder="Beschreibung – wann, wo, was genau?"
+                value={newHelp.description}
+                onChange={(e) => setNewHelp((n) => ({ ...n, description: e.target.value }))}
+                rows={5}
+                className="w-full border rounded-2xl px-4 py-3 resize-y text-sm"
+                maxLength={2000}
+              />
+              <p className="text-xs text-[#94a3b8]">
+                Keine sensiblen Daten (Bank, Krankheit im Detail) öffentlich posten. Kontakt am besten über die App / Nachricht.
+              </p>
+              <button
+                type="button"
+                disabled={savingHelp}
+                onClick={() => void submitNewHelp()}
+                className="dorf-button w-full justify-center py-4 disabled:opacity-60"
+              >
+                {savingHelp ? <Loader2 className="w-5 h-5 animate-spin" /> : null}
+                Veröffentlichen
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Login / Register Modal */}
       {showLogin && (

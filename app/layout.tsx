@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "sonner";
@@ -13,6 +13,10 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+export const viewport: Viewport = {
+  themeColor: "#166534",
+};
+
 export const metadata: Metadata = {
   title: "Frauenweiler DorfApp",
   description: "Die offizielle PWA für Frauenweiler bei Wiesloch – Termine, Umfragen, Mitmachen & Nachbarschaftshilfe",
@@ -21,7 +25,6 @@ export const metadata: Metadata = {
     icon: "/icon-192.png",
     apple: "/icon-192.png",
   },
-  themeColor: "#166534",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
@@ -37,9 +40,10 @@ export default function RootLayout({
   return (
     <html
       lang="de"
+      suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-zinc-50">
+      <body className="min-h-full flex flex-col bg-zinc-50" suppressHydrationWarning>
         {children}
         <Toaster position="top-center" richColors closeButton />
         
