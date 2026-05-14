@@ -5,7 +5,7 @@ import {
   Calendar, Users, Vote, Home, User, Bell, Plus,
   MapPin, Clock, Heart, Check, LogIn, Shield,
   Mail, Pencil, KeyRound, Loader2, Save,
-  Handshake, ExternalLink, Menu, Instagram, Facebook, Youtube, X, Share2,
+  Handshake, ExternalLink, Menu, Instagram, Facebook, Youtube, X, Share2, Trash2,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
@@ -20,6 +20,9 @@ import {
   loadVillageDataFromSupabase,
 } from '@/lib/dorfapp/village-data';
 import { parseSocialLinksInput, labelForSocialUrl } from '@/lib/dorfapp/social-links';
+
+/** Muss im Lösch-Dialog exakt eingegeben werden (Groß-/Kleinschreibung beachten). */
+const ACCOUNT_DELETE_PHRASE = 'KONTO LÖSCHEN';
 
 interface Poll {
   id: string;
@@ -188,6 +191,9 @@ export default function FrauenweilerDorfApp() {
   const [savingName, setSavingName] = useState(false);
   const [sendingReset, setSendingReset] = useState(false);
   const [activityCounts, setActivityCounts] = useState<{ contributions: number; pollVotes: number } | null>(null);
+  const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
+  const [deleteAccountPhrase, setDeleteAccountPhrase] = useState('');
+  const [deletingAccount, setDeletingAccount] = useState(false);
 
   // Admin form states
   const [newNews, setNewNews] = useState({ title: '', content: '', category: 'Allgemein', important: false, socialLinksRaw: '' });
@@ -546,6 +552,47 @@ export default function FrauenweilerDorfApp() {
     await supabase.auth.signOut();
     setActiveTab('home');
     toast.info('Du wurdest abgemeldet.');
+  };
+
+  const handleDeleteAccount = async () => {
+    if (deleteAccountPhrase !== ACCOUNT_DELETE_PHRASE) {
+      toast.error('Bestätigung fehlt', { description: `Bitte exakt eingeben: ${ACCOUNT_DELETE_PHRASE}` });
+      return;
+    }
+    if (!useSupabase) {
+      toast.message('Demo-Modus', { description: 'Kontolöschung ist nur mit echtem Supabase-Betrieb möglich.' });
+      return;
+    }
+    setDeletingAccount(true);
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        toast.error('Keine gültige Sitzung', { description: 'Bitte melde dich erneut an.' });
+        return;
+      }
+      const res = await fetch('/api/account', {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      const body = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) {
+        throw new Error(body.error || `HTTP ${res.status}`);
+      }
+      setShowDeleteAccountModal(false);
+      setDeleteAccountPhrase('');
+      await supabase.auth.signOut();
+      setActiveTab('home');
+      toast.success('Dein Konto wurde gelöscht.', {
+        description: 'Du bist abgemeldet. Bei Rückfragen wende dich an die Betreuung der DorfApp.',
+      });
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      toast.error('Konto konnte nicht gelöscht werden', { description: msg });
+    } finally {
+      setDeletingAccount(false);
+    }
   };
 
   const saveDisplayName = async () => {
@@ -1715,14 +1762,40 @@ export default function FrauenweilerDorfApp() {
                     >
                       Abmelden
                     </button>
+
+                    {useSupabase ? (
+                      <div className="border-t border-zinc-200 pt-4">
+                        <p className="text-xs font-medium text-[#64748b] mb-2">Konto endgültig löschen</p>
+                        <p className="text-xs text-[#64748b] leading-relaxed mb-3">
+                          Dein Zugang, Profil, Abstimmungen und Mitmach-Einträge werden entfernt. Öffentliche Inhalte
+                          (z. B. Termine), die du erstellt hast, können anonym weiter sichtbar sein.
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setDeleteAccountPhrase('');
+                            setShowDeleteAccountModal(true);
+                          }}
+                          className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl border border-red-300 bg-white text-sm font-semibold text-red-800 hover:bg-red-50"
+                        >
+                          <Trash2 className="w-4 h-4 shrink-0" aria-hidden />
+                          Konto löschen …
+                        </button>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-[#94a3b8] border-t border-zinc-100 pt-3">
+                        Kontolöschung ist im Demo-Modus nicht verfügbar.
+                      </p>
+                    )}
                   </div>
                 </div>
 
                 <div className="text-xs text-[#64748b] leading-relaxed space-y-2 px-1 mb-6 border border-zinc-100 rounded-2xl p-4 bg-zinc-50/80">
-                  <p className="font-medium text-[#475569]">Datenschutz &amp; Kontoende</p>
+                  <p className="font-medium text-[#475569]">Datenschutz &amp; Auskunft</p>
                   <p>
-                    Eine vollständige Selbstbedienung zum Löschen des Kontos ist in dieser App noch nicht eingebaut.
-                    Wende dich für Auskunft oder Löschwünsche bitte an die Betreuung der DorfApp bzw. den Ortschaftsrat.
+                    Du kannst dein Konto selbst unter „Konto &amp; Sicherheit“ löschen (wenn Supabase und Server-Key
+                    konfiguriert sind). Weitere Auskunfts- oder Löschwünsche nach DSGVO kannst du an die Betreuung der
+                    DorfApp bzw. den Ortschaftsrat richten.
                   </p>
                 </div>
 
@@ -1772,6 +1845,73 @@ export default function FrauenweilerDorfApp() {
           </button>
         </div>
       </nav>
+
+      {/* Konto endgültig löschen */}
+      {showDeleteAccountModal && (
+        <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/60 sm:items-center">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="delete-account-title"
+            className="max-h-[90vh] w-full overflow-y-auto rounded-t-3xl bg-white p-8 sm:w-[440px] sm:rounded-3xl"
+          >
+            <div className="mb-4 flex items-start justify-between gap-3">
+              <h3 id="delete-account-title" className="text-xl font-semibold text-red-900">
+                Konto wirklich löschen?
+              </h3>
+              <button
+                type="button"
+                className="text-2xl leading-none text-[#64748b]"
+                onClick={() => {
+                  setShowDeleteAccountModal(false);
+                  setDeleteAccountPhrase('');
+                }}
+                aria-label="Schließen"
+              >
+                ×
+              </button>
+            </div>
+            <p className="text-sm leading-relaxed text-[#475569]">
+              Dieser Schritt kann nicht rückgängig gemacht werden. Du verlierst den Zugang zur DorfApp mit dieser
+              E-Mail-Adresse. Stimmen bei Umfragen und deine Mitmach-Einträge werden mit dem Konto entfernt.
+            </p>
+            <p className="mt-3 text-xs text-[#64748b]">
+              Zur Bestätigung bitte exakt (Großbuchstaben, Leerzeichen):{' '}
+              <span className="font-mono font-semibold text-[#0f172a]">{ACCOUNT_DELETE_PHRASE}</span>
+            </p>
+            <input
+              type="text"
+              autoComplete="off"
+              value={deleteAccountPhrase}
+              onChange={(e) => setDeleteAccountPhrase(e.target.value)}
+              placeholder={ACCOUNT_DELETE_PHRASE}
+              className="mt-2 w-full rounded-2xl border border-zinc-200 px-4 py-3 font-mono text-sm"
+            />
+            <div className="mt-6 flex flex-col gap-2 sm:flex-row-reverse">
+              <button
+                type="button"
+                disabled={deletingAccount || deleteAccountPhrase !== ACCOUNT_DELETE_PHRASE}
+                onClick={() => void handleDeleteAccount()}
+                className="flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-red-700 px-4 py-3 text-sm font-semibold text-white hover:bg-red-800 disabled:opacity-50 sm:flex-1"
+              >
+                {deletingAccount ? <Loader2 className="h-5 w-5 animate-spin" aria-hidden /> : <Trash2 className="h-4 w-4" />}
+                Endgültig löschen
+              </button>
+              <button
+                type="button"
+                disabled={deletingAccount}
+                onClick={() => {
+                  setShowDeleteAccountModal(false);
+                  setDeleteAccountPhrase('');
+                }}
+                className="min-h-12 w-full rounded-2xl border border-zinc-200 px-4 py-3 text-sm font-medium text-[#475569] hover:bg-zinc-50 sm:flex-1"
+              >
+                Abbrechen
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Neuer Hilfe-Eintrag */}
       {showNewHelpModal && (
