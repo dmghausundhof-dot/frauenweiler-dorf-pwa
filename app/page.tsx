@@ -172,8 +172,27 @@ export default function FrauenweilerDorfApp() {
     };
   }, [useSupabase]);
 
+  /** Öffnet den Login-Dialog und zeigt einen Hinweis (Umfragen, Mitmachen, …). */
+  const promptLogin = (description: string) => {
+    toast.info('Bitte anmelden', { description });
+    setShowLogin(true);
+  };
+
+  /** Von Terminen: Mitmachen-Tab mit gewähltem Event; Gast bekommt sofort Login-Hinweis. */
+  const openContributeForEvent = (eventId: number) => {
+    setSelectedEventForContrib(eventId);
+    setActiveTab('contribute');
+    if (!isLoggedIn) {
+      promptLogin('Termin ist ausgewählt – zum Eintragen bei Mitbring- oder Helfer-Aufgaben bitte anmelden.');
+    }
+  };
+
   // --- Actions ---
   const handleRSVP = (eventId: number) => {
+    if (!isLoggedIn) {
+      promptLogin('Mit einem Konto kannst du deine Teilnahme am Termin festhalten.');
+      return;
+    }
     setEvents(prev => prev.map(ev => 
       ev.id === eventId ? { ...ev, attendees: ev.attendees + 1 } : ev
     ));
@@ -183,6 +202,10 @@ export default function FrauenweilerDorfApp() {
   };
 
   const handleVote = (pollId: number, optionIndex: number) => {
+    if (!isLoggedIn) {
+      promptLogin('Nur angemeldete Bewohnerinnen und Bewohner können abstimmen.');
+      return;
+    }
     setPolls(prev => prev.map(poll => {
       if (poll.id !== pollId) return poll;
       
@@ -203,6 +226,10 @@ export default function FrauenweilerDorfApp() {
   };
 
   const handleSignUpContribution = (contribId: number) => {
+    if (!isLoggedIn) {
+      promptLogin('Zum Eintragen bei Mitbring- oder Helfer-Aufgaben ist ein Konto nötig.');
+      return;
+    }
     setContributions(prev => prev.map(c => {
       if (c.id === contribId && c.signedUp < c.needed) {
         return { ...c, signedUp: c.signedUp + 1 };
@@ -459,7 +486,14 @@ export default function FrauenweilerDorfApp() {
               ].map((action, i) => (
                 <button 
                   key={i}
-                  onClick={() => setActiveTab(action.tab)}
+                  type="button"
+                  onClick={() => {
+                    setActiveTab(action.tab);
+                    if (!isLoggedIn && action.tab === 'contribute') {
+                      setSelectedEventForContrib(null);
+                      promptLogin('Wähle ein Event und melde dich an, um dich für Mitmach-Aktionen einzutragen.');
+                    }
+                  }}
                   className="dorf-card p-5 flex flex-col items-center justify-center gap-3 active:scale-[0.985] transition-all"
                 >
                   <action.icon className="w-8 h-8 text-[#166534]" />
@@ -492,11 +526,17 @@ export default function FrauenweilerDorfApp() {
                   </div>
                 </div>
                 <button 
+                  type="button"
                   onClick={() => handleRSVP(1)} 
-                  className="dorf-button w-full mt-5 justify-center"
+                  className={`dorf-button w-full mt-5 justify-center ${!isLoggedIn ? 'ring-2 ring-amber-200' : ''}`}
                 >
-                  <Check className="w-4 h-4" /> Ich komme mit!
+                  <Check className="w-4 h-4" /> {!isLoggedIn ? 'Anmelden zum Zusagen' : 'Ich komme mit!'}
                 </button>
+                {!isLoggedIn && (
+                  <p className="text-xs text-center text-[#64748b] mt-2 px-1">
+                    Die Teilnahme am Termin wird erst nach Anmeldung gezählt.
+                  </p>
+                )}
               </div>
             </div>
           </div>
@@ -534,6 +574,13 @@ export default function FrauenweilerDorfApp() {
               )}
             </div>
 
+            {!isLoggedIn && (
+              <div className="mb-6 p-4 rounded-2xl border border-[#166534]/30 bg-[#f0fdf4] text-sm text-[#14532d]">
+                <strong className="block mb-1">Termine für alle sichtbar</strong>
+                Als Gast kannst du alle Termine und Details lesen. Für „Ich komme mit“ und „Mitbringen / Helfen“ bitte anmelden.
+              </div>
+            )}
+
             <div className="space-y-4">
               {events.map(event => (
                 <div key={event.id} className="dorf-card p-5">
@@ -557,16 +604,15 @@ export default function FrauenweilerDorfApp() {
 
                   <div className="flex gap-3 mt-5">
                     <button 
+                      type="button"
                       onClick={() => handleRSVP(event.id)}
-                      className="flex-1 dorf-button justify-center text-sm py-3"
+                      className={`flex-1 dorf-button justify-center text-sm py-3 ${!isLoggedIn ? 'ring-2 ring-amber-200' : ''}`}
                     >
-                      Ich komme mit
+                      {!isLoggedIn ? 'Anmelden zum Zusagen' : 'Ich komme mit'}
                     </button>
                     <button 
-                      onClick={() => {
-                        setSelectedEventForContrib(event.id);
-                        setActiveTab('contribute');
-                      }}
+                      type="button"
+                      onClick={() => openContributeForEvent(event.id)}
                       className="flex-1 border border-[#166534] text-[#166534] rounded-2xl py-3 text-sm font-semibold"
                     >
                       Mitbringen / Helfen
@@ -581,7 +627,13 @@ export default function FrauenweilerDorfApp() {
         {/* POLLS TAB */}
         {activeTab === 'polls' && (
           <div>
-            <h2 className="text-2xl font-semibold mb-6">Aktuelle Umfragen</h2>
+            <h2 className="text-2xl font-semibold mb-4">Aktuelle Umfragen</h2>
+            {!isLoggedIn && (
+              <div className="mb-6 p-4 rounded-2xl border border-[#166534]/30 bg-[#f0fdf4] text-sm text-[#14532d]">
+                <strong className="block mb-1">Nur für angemeldete Nutzer</strong>
+                Ergebnisse kannst du als Gast mitlesen. Zum Abstimmen bitte oben auf „Anmelden“ tippen oder ein Konto anlegen.
+              </div>
+            )}
             <div className="space-y-6">
               {polls.map(poll => (
                 <div key={poll.id} className="dorf-card p-6">
@@ -591,13 +643,17 @@ export default function FrauenweilerDorfApp() {
                     {poll.options.map((option, index) => {
                       const percentage = Math.round((option.votes / poll.totalVotes) * 100);
                       const voted = poll.userVoted === index;
+                      const voteLocked = !!poll.userVoted;
                       
                       return (
                         <button
                           key={index}
-                          onClick={() => !poll.userVoted && handleVote(poll.id, index)}
-                          disabled={!!poll.userVoted}
-                          className={`w-full text-left p-4 rounded-2xl border transition-all ${voted ? 'border-[#166534] bg-[#f0fdf4]' : 'hover:border-[#166534]/50'}`}
+                          type="button"
+                          onClick={() => !voteLocked && handleVote(poll.id, index)}
+                          disabled={voteLocked}
+                          className={`w-full text-left p-4 rounded-2xl border transition-all ${
+                            voted ? 'border-[#166534] bg-[#f0fdf4]' : voteLocked ? 'opacity-60 cursor-not-allowed' : isLoggedIn ? 'hover:border-[#166534]/50' : 'hover:border-amber-400/60 border-dashed'
+                          }`}
                         >
                           <div className="flex justify-between text-sm mb-1.5">
                             <span>{option.text}</span>
@@ -625,7 +681,13 @@ export default function FrauenweilerDorfApp() {
         {activeTab === 'contribute' && (
           <div>
             <h2 className="text-2xl font-semibold mb-2">Mitmachen & Helfen</h2>
-            <p className="text-[#64748b] mb-6">Wähle ein Event und trage dich ein</p>
+            <p className="text-[#64748b] mb-4">Wähle ein Event und trage dich ein</p>
+            {!isLoggedIn && (
+              <div className="mb-6 p-4 rounded-2xl border border-amber-200 bg-[#fffbeb] text-sm text-amber-950">
+                <strong className="block mb-1">Eintragen nur mit Konto</strong>
+                Du kannst Aufgaben und Termine einsehen. Zum Mitmachen bitte anmelden – so bleibt die Zuordnung nachvollziehbar.
+              </div>
+            )}
 
             {!selectedEventForContrib ? (
               <div className="space-y-3">
@@ -673,11 +735,12 @@ export default function FrauenweilerDorfApp() {
                         </div>
                         
                         <button 
+                          type="button"
                           onClick={() => handleSignUpContribution(contrib.id)}
                           disabled={isFull}
-                          className={`mt-4 w-full py-3 rounded-2xl text-sm font-semibold transition-all ${isFull ? 'bg-zinc-200 text-zinc-500' : 'dorf-button'}`}
+                          className={`mt-4 w-full py-3 rounded-2xl text-sm font-semibold transition-all ${isFull ? 'bg-zinc-200 text-zinc-500 cursor-not-allowed' : !isLoggedIn ? 'dorf-button ring-2 ring-amber-200' : 'dorf-button'}`}
                         >
-                          {isFull ? 'Voll – Danke!' : 'Ich helfe / bringe mit'}
+                          {isFull ? 'Voll – Danke!' : !isLoggedIn ? 'Anmelden zum Mitmachen' : 'Ich helfe / bringe mit'}
                         </button>
                       </div>
                     );
@@ -693,50 +756,86 @@ export default function FrauenweilerDorfApp() {
         {/* PROFILE TAB */}
         {activeTab === 'profile' && (
           <div className="max-w-md mx-auto">
-            <div className="text-center mb-8">
-              <div className="w-20 h-20 bg-[#166534] rounded-full mx-auto flex items-center justify-center text-white text-3xl font-semibold mb-4">
-                {userName.split(' ').map(n => n[0]).join('')}
-              </div>
-              <h2 className="text-2xl font-semibold">{userName}</h2>
-              <p className="text-[#64748b]">Bewohnerin • Frauenweiler</p>
-            </div>
-
-            <div className="dorf-card p-6 space-y-4">
-              <div className="flex justify-between py-1">
-                <span>Angemeldet seit</span>
-                <span className="font-mono text-sm">März 2025</span>
-              </div>
-              <div className="flex justify-between py-1 border-t">
-                <span>Teilnahmen</span>
-                <span className="font-semibold">7</span>
-              </div>
-              <div className="flex justify-between py-1 border-t">
-                <span>Helferstunden</span>
-                <span className="font-semibold">14 Std</span>
-              </div>
-            </div>
-
-            {isAdmin && (
-              <div className="mt-6">
-                <button 
-                  onClick={() => setShowAdminModal(true)}
-                  className="w-full flex items-center justify-center gap-2 py-3 bg-[#166534] text-white rounded-2xl font-medium hover:bg-[#14532d]"
-                >
-                  <Shield className="w-4 h-4" /> Admin-Bereich öffnen
-                </button>
-                <div className="mt-3 p-4 bg-[#fefce8] border border-yellow-200 rounded-2xl text-sm">
-                  <strong>Admin-Modus aktiv</strong><br />
-                  Du kannst News, Termine und Mitbring-/Helfer-Aufgaben anlegen.
+            {!isLoggedIn ? (
+              <>
+                <div className="text-center mb-8">
+                  <div className="w-20 h-20 bg-zinc-200 rounded-full mx-auto flex items-center justify-center text-[#166534] mb-4">
+                    <LogIn className="w-9 h-9" />
+                  </div>
+                  <h2 className="text-2xl font-semibold">Gast-Modus</h2>
+                  <p className="text-[#64748b] mt-2 text-sm px-2">
+                    Du siehst News und Termine ohne Konto. Zum Zusagen bei Terminen, für Abstimmungen und Mitmach-Einträge ist eine Anmeldung nötig.
+                  </p>
                 </div>
-              </div>
-            )}
 
-            <button 
-              onClick={handleLogout}
-              className="mt-8 w-full py-4 text-red-600 font-medium border border-red-200 rounded-2xl hover:bg-red-50"
-            >
-              Abmelden
-            </button>
+                <div className="dorf-card p-6 text-sm text-[#475569] space-y-3">
+                  <p className="font-medium text-[#0f172a]">Mit Konto kannst du u. a.:</p>
+                  <ul className="list-disc pl-5 space-y-1.5">
+                    <li>„Ich komme mit“ bei Terminen bestätigen</li>
+                    <li>an Dorf-Umfragen teilnehmen</li>
+                    <li>dich bei Mitbring- und Helfer-Aktionen eintragen</li>
+                    <li>persönliche Bereiche nutzen, sobald sie freigeschaltet sind</li>
+                  </ul>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setShowLogin(true)}
+                  className="mt-8 w-full dorf-button justify-center py-4 text-base"
+                >
+                  <LogIn className="w-4 h-4" /> Anmelden oder registrieren
+                </button>
+              </>
+            ) : (
+              <>
+                <div className="text-center mb-8">
+                  <div className="w-20 h-20 bg-[#166534] rounded-full mx-auto flex items-center justify-center text-white text-3xl font-semibold mb-4">
+                    {userName.split(' ').map(n => n[0]).join('')}
+                  </div>
+                  <h2 className="text-2xl font-semibold">{userName}</h2>
+                  <p className="text-[#64748b]">Mitglied • Frauenweiler</p>
+                </div>
+
+                <div className="dorf-card p-6 space-y-4">
+                  <div className="flex justify-between py-1">
+                    <span>Angemeldet seit</span>
+                    <span className="font-mono text-sm">März 2025</span>
+                  </div>
+                  <div className="flex justify-between py-1 border-t">
+                    <span>Teilnahmen</span>
+                    <span className="font-semibold">7</span>
+                  </div>
+                  <div className="flex justify-between py-1 border-t">
+                    <span>Helferstunden</span>
+                    <span className="font-semibold">14 Std</span>
+                  </div>
+                </div>
+
+                {isAdmin && (
+                  <div className="mt-6">
+                    <button 
+                      type="button"
+                      onClick={() => setShowAdminModal(true)}
+                      className="w-full flex items-center justify-center gap-2 py-3 bg-[#166534] text-white rounded-2xl font-medium hover:bg-[#14532d]"
+                    >
+                      <Shield className="w-4 h-4" /> Admin-Bereich öffnen
+                    </button>
+                    <div className="mt-3 p-4 bg-[#fefce8] border border-yellow-200 rounded-2xl text-sm">
+                      <strong>Admin-Modus aktiv</strong><br />
+                      Du kannst News, Termine und Mitbring-/Helfer-Aufgaben anlegen.
+                    </div>
+                  </div>
+                )}
+
+                <button 
+                  type="button"
+                  onClick={handleLogout}
+                  className="mt-8 w-full py-4 text-red-600 font-medium border border-red-200 rounded-2xl hover:bg-red-50"
+                >
+                  Abmelden
+                </button>
+              </>
+            )}
           </div>
         )}
       </main>

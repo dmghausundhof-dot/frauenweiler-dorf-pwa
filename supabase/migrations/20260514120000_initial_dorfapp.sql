@@ -2,8 +2,6 @@
 -- Frauenweiler DorfApp - Supabase Schema
 -- ============================================
 
--- UUIDs: gen_random_uuid() (Postgres, auf Supabase ohne uuid-ossp in public nutzbar)
-
 -- ============================================
 -- PROFILES (User profiles + admin flag)
 -- ============================================
