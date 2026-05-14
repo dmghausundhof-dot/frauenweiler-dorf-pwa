@@ -262,6 +262,10 @@ export default function FrauenweilerDorfApp() {
     setDisplayNameDraft('');
   }, []);
 
+  useEffect(() => {
+    if (!isAdmin) setShowAdminModal(false);
+  }, [isAdmin]);
+
   // ============================================
   // SUPABASE AUTH + REALTIME
   // ============================================
@@ -793,6 +797,20 @@ export default function FrauenweilerDorfApp() {
           </button>
 
           <div className="flex shrink-0 items-center gap-1.5">
+            {isLoggedIn && isAdmin && (
+              <button
+                type="button"
+                aria-label="Verwaltung öffnen"
+                title="Verwaltung"
+                onClick={() => {
+                  setAdminTab('news');
+                  setShowAdminModal(true);
+                }}
+                className="tap-target flex shrink-0 items-center justify-center rounded-2xl border border-amber-200 bg-amber-50 text-amber-900 active:bg-amber-100"
+              >
+                <Shield className="h-5 w-5" strokeWidth={2} />
+              </button>
+            )}
             {isLoggedIn ? (
               <button
                 type="button"
@@ -873,6 +891,26 @@ export default function FrauenweilerDorfApp() {
                   </button>
                 );
               })}
+              {isLoggedIn && isAdmin && (
+                <>
+                  <div className="mx-2 my-3 border-t border-zinc-200" role="presentation" />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAdminTab('news');
+                      setShowAdminModal(true);
+                      setNavDrawerOpen(false);
+                    }}
+                    className="flex w-full items-center gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3.5 text-left text-base font-semibold text-amber-950 active:bg-amber-100"
+                  >
+                    <Shield className="h-5 w-5 shrink-0 text-amber-800" />
+                    Verwaltung
+                  </button>
+                  <p className="mt-1 px-4 text-xs leading-snug text-amber-900/80">
+                    Nur für Ortschafts-Admins: News, Termine und Mitmach-Aufgaben.
+                  </p>
+                </>
+              )}
             </div>
             <div className="border-t border-zinc-100 p-3">
               <a
@@ -951,6 +989,19 @@ export default function FrauenweilerDorfApp() {
                     <span className="font-semibold text-sm text-center">{action.label}</span>
                   </button>
                 ))}
+                {isLoggedIn && isAdmin && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAdminTab('news');
+                      setShowAdminModal(true);
+                    }}
+                    className="dorf-card flex flex-col items-center justify-center gap-3 border-2 border-amber-200 bg-amber-50/90 p-5 active:scale-[0.985] transition-all"
+                  >
+                    <Shield className="h-8 w-8 text-amber-800" />
+                    <span className="text-center text-sm font-semibold text-amber-950">Verwaltung</span>
+                  </button>
+                )}
                 <a
                   href="http://frauenweiler.org/"
                   target="_blank"
@@ -1121,7 +1172,21 @@ export default function FrauenweilerDorfApp() {
         {/* NEWS TAB */}
         {activeTab === 'news' && (
           <div>
-            <h2 className="text-xl font-semibold mb-4 sm:text-2xl sm:mb-6">Aktuelle Nachrichten</h2>
+            <div className="mb-4 flex flex-col gap-3 sm:mb-6 sm:flex-row sm:items-center sm:justify-between">
+              <h2 className="text-xl font-semibold sm:text-2xl">Aktuelle Nachrichten</h2>
+              {isAdmin && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAdminTab('news');
+                    setShowAdminModal(true);
+                  }}
+                  className="inline-flex shrink-0 items-center justify-center gap-2 self-start rounded-xl bg-[#166534] px-4 py-2.5 text-sm font-medium text-white hover:bg-[#14532d] sm:self-auto"
+                >
+                  <Plus className="h-4 w-4" /> News erstellen
+                </button>
+              )}
+            </div>
             <div className="space-y-4">
               {news.map((item) => (
                 <article key={item.id} className="dorf-card p-5">
@@ -1500,6 +1565,12 @@ export default function FrauenweilerDorfApp() {
                   <p className="text-sm text-[#64748b] mt-1">
                     {isAdmin ? 'Administrator · DorfApp' : 'Mitglied · DorfApp Frauenweiler'}
                   </p>
+                  {isAdmin && (
+                    <p className="mx-auto mt-3 max-w-sm rounded-2xl border border-amber-200 bg-amber-50 px-3 py-2 text-left text-xs leading-relaxed text-amber-950">
+                      Verwaltung nur für dich sichtbar: <strong>Menü</strong> → „Verwaltung“, die Kachel auf der{' '}
+                      <strong>Start</strong>seite oder das <strong>Schild</strong> oben in der Leiste.
+                    </p>
+                  )}
                 </div>
 
                 <div className="mb-5">
@@ -1655,25 +1726,6 @@ export default function FrauenweilerDorfApp() {
                   </p>
                 </div>
 
-                {isAdmin && (
-                  <div className="mb-6">
-                    <h3 className="text-xs font-semibold uppercase tracking-wider text-[#64748b] mb-2 px-1">
-                      Verwaltung
-                    </h3>
-                    <button
-                      type="button"
-                      onClick={() => setShowAdminModal(true)}
-                      className="w-full flex items-center justify-center gap-2 py-3 bg-[#166534] text-white rounded-2xl font-medium hover:bg-[#14532d] text-sm"
-                    >
-                      <Shield className="w-4 h-4" /> Admin-Bereich öffnen
-                    </button>
-                    <div className="mt-3 p-4 bg-[#fefce8] border border-yellow-200 rounded-2xl text-sm text-[#713f12]">
-                      <strong>Admin-Modus aktiv</strong>
-                      <br />
-                      Du kannst News, Termine und Mitbring-/Helfer-Aufgaben anlegen.
-                    </div>
-                  </div>
-                )}
               </>
             )}
           </div>
