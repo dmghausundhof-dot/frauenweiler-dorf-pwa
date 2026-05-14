@@ -1371,8 +1371,29 @@ export default function FrauenweilerDorfApp() {
         {/* CONTRIBUTE / MITBRINGEN & HELFEN */}
         {activeTab === 'contribute' && (
           <div>
-            <h2 className="text-2xl font-semibold mb-2">Mitmachen & Helfen</h2>
-            <p className="text-[#64748b] mb-4">Wähle ein Event und trage dich ein</p>
+            <div className="mb-4 flex flex-col gap-3 sm:mb-6 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <h2 className="text-xl font-semibold sm:text-2xl">Mitmachen &amp; Helfen</h2>
+                <p className="mt-1 text-sm text-[#64748b]">Wähle ein Event und trage dich ein</p>
+              </div>
+              {isAdmin && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAdminTab('contribution');
+                    setNewContribution((prev) => ({
+                      ...prev,
+                      eventId: selectedEventForContrib ?? '',
+                    }));
+                    setShowAdminModal(true);
+                  }}
+                  className="inline-flex shrink-0 items-center justify-center gap-2 self-start rounded-xl bg-[#166534] px-4 py-2.5 text-sm font-medium text-white hover:bg-[#14532d] sm:self-auto"
+                >
+                  <Plus className="h-4 w-4 shrink-0" aria-hidden />
+                  Mitmach-Aufgabe anlegen
+                </button>
+              )}
+            </div>
             {!isLoggedIn && (
               <div className="mb-6 p-4 rounded-2xl border border-amber-200 bg-[#fffbeb] text-sm text-amber-950">
                 <strong className="block mb-1">Eintragen nur mit Konto</strong>
