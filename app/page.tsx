@@ -193,6 +193,9 @@ export default function FrauenweilerDorfApp() {
   const [activityCounts, setActivityCounts] = useState<{ contributions: number; pollVotes: number } | null>(null);
   const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
   const [deleteAccountPhrase, setDeleteAccountPhrase] = useState('');
+  const [deleteAccountPassword, setDeleteAccountPassword] = useState('');
+  const [deleteAccountEmailConfirm, setDeleteAccountEmailConfirm] = useState('');
+  const [deleteAccountAuthHint, setDeleteAccountAuthHint] = useState<'password' | 'email_confirm' | null>(null);
   const [deletingAccount, setDeletingAccount] = useState(false);
 
   // Admin form states
@@ -271,6 +274,27 @@ export default function FrauenweilerDorfApp() {
   useEffect(() => {
     if (!isAdmin) setShowAdminModal(false);
   }, [isAdmin]);
+
+  useEffect(() => {
+    if (!showDeleteAccountModal || !useSupabase) {
+      setDeleteAccountAuthHint(null);
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      const { data: { user }, error } = await supabase.auth.getUser();
+      if (cancelled) return;
+      if (error || !user?.email) {
+        setDeleteAccountAuthHint('password');
+        return;
+      }
+      const hasEmailIdentity = (user.identities ?? []).some((i) => i.provider === 'email');
+      setDeleteAccountAuthHint(hasEmailIdentity ? 'password' : 'email_confirm');
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [showDeleteAccountModal, useSupabase]);
 
   // ============================================
   // SUPABASE AUTH + REALTIME
@@ -563,8 +587,46 @@ export default function FrauenweilerDorfApp() {
       toast.message('Demo-Modus', { description: 'Kontolöschung ist nur mit echtem Supabase-Betrieb möglich.' });
       return;
     }
+    if (!deleteAccountAuthHint) {
+      toast.error('Bitte kurz warten', { description: 'Sicherheitsprüfung wird geladen.' });
+      return;
+    }
+
     setDeletingAccount(true);
     try {
+      const { data: authData, error: authErr } = await supabase.auth.getUser();
+      const user = authData?.user;
+      if (authErr || !user?.email) {
+        toast.error('Sitzung ungültig', { description: 'Bitte melde dich erneut an.' });
+        return;
+      }
+
+      const hasEmailIdentity = (user.identities ?? []).some((i) => i.provider === 'email');
+
+      if (hasEmailIdentity) {
+        const pwd = deleteAccountPassword.trim();
+        if (!pwd) {
+          toast.error('Passwort fehlt', { description: 'Bitte dein aktuelles Passwort eingeben.' });
+          return;
+        }
+        const { error: signErr } = await supabase.auth.signInWithPassword({
+          email: user.email,
+          password: pwd,
+        });
+        if (signErr) {
+          toast.error('Passwort stimmt nicht', { description: signErr.message });
+          return;
+        }
+      } else {
+        const typed = deleteAccountEmailConfirm.trim().toLowerCase();
+        if (typed !== user.email.trim().toLowerCase()) {
+          toast.error('E-Mail stimmt nicht', {
+            description: 'Bitte deine vollständige Anmelde-E-Mail exakt wie im Konto hinterlegt eingeben.',
+          });
+          return;
+        }
+      }
+
       const {
         data: { session },
       } = await supabase.auth.getSession();
@@ -582,6 +644,9 @@ export default function FrauenweilerDorfApp() {
       }
       setShowDeleteAccountModal(false);
       setDeleteAccountPhrase('');
+      setDeleteAccountPassword('');
+      setDeleteAccountEmailConfirm('');
+      setDeleteAccountAuthHint(null);
       await supabase.auth.signOut();
       setActiveTab('home');
       toast.success('Dein Konto wurde gelöscht.', {
@@ -1795,6 +1860,9 @@ export default function FrauenweilerDorfApp() {
                           type="button"
                           onClick={() => {
                             setDeleteAccountPhrase('');
+                            setDeleteAccountPassword('');
+                            setDeleteAccountEmailConfirm('');
+                            setDeleteAccountAuthHint(null);
                             setShowDeleteAccountModal(true);
                           }}
                           className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl border border-red-300 bg-white text-sm font-semibold text-red-800 hover:bg-red-50"
@@ -1886,6 +1954,9 @@ export default function FrauenweilerDorfApp() {
                 onClick={() => {
                   setShowDeleteAccountModal(false);
                   setDeleteAccountPhrase('');
+                  setDeleteAccountPassword('');
+                  setDeleteAccountEmailConfirm('');
+                  setDeleteAccountAuthHint(null);
                 }}
                 aria-label="Schließen"
               >
@@ -1908,10 +1979,65 @@ export default function FrauenweilerDorfApp() {
               placeholder={ACCOUNT_DELETE_PHRASE}
               className="mt-2 w-full rounded-2xl border border-zinc-200 px-4 py-3 font-mono text-sm"
             />
+
+            {!deleteAccountAuthHint ? (
+              <div className="mt-4 flex items-center gap-2 text-sm text-[#64748b]">
+                <Loader2 className="h-4 w-4 shrink-0 animate-spin text-[#166534]" aria-hidden />
+                Sicherheitsprüfung …
+              </div>
+            ) : deleteAccountAuthHint === 'password' ? (
+              <div className="mt-4">
+                <label htmlFor="delete-account-pw" className="mb-1 block text-xs font-medium text-[#64748b]">
+                  Aktuelles Passwort erneut eingeben
+                </label>
+                <input
+                  id="delete-account-pw"
+                  type="password"
+                  autoComplete="current-password"
+                  value={deleteAccountPassword}
+                  onChange={(e) => setDeleteAccountPassword(e.target.value)}
+                  className="w-full rounded-2xl border border-zinc-200 px-4 py-3 text-sm"
+                  placeholder="Passwort"
+                />
+                <p className="mt-2 text-xs leading-relaxed text-[#94a3b8]">
+                  So stellen wir sicher, dass wirklich du am Gerät bist. Es wird kurz erneut angemeldet, danach wird
+                  das Konto entfernt. Meldest du dich nur per Magic Link ohne Passwort? Dann bitte zuerst unter
+                  „Passwort zurücksetzen“ ein Passwort setzen.
+                </p>
+              </div>
+            ) : (
+              <div className="mt-4">
+                <label htmlFor="delete-account-email" className="mb-1 block text-xs font-medium text-[#64748b]">
+                  Anmelde-E-Mail zur Bestätigung (ohne Passwort-Anmeldung, z. B. Google)
+                </label>
+                <input
+                  id="delete-account-email"
+                  type="email"
+                  autoComplete="email"
+                  value={deleteAccountEmailConfirm}
+                  onChange={(e) => setDeleteAccountEmailConfirm(e.target.value)}
+                  className="w-full rounded-2xl border border-zinc-200 px-4 py-3 text-sm"
+                  placeholder={userEmail ?? 'deine@email.de'}
+                />
+                <p className="mt-2 text-xs leading-relaxed text-[#94a3b8]">
+                  Du hast kein Passwort für diese App? Dann bestätige die Löschung durch erneutes Eintippen deiner
+                  hinterlegten E-Mail-Adresse. (Wenn du lieber ein Passwort setzen möchtest: Profil → Passwort
+                  zurücksetzen.)
+                </p>
+              </div>
+            )}
+
             <div className="mt-6 flex flex-col gap-2 sm:flex-row-reverse">
               <button
                 type="button"
-                disabled={deletingAccount || deleteAccountPhrase !== ACCOUNT_DELETE_PHRASE}
+                disabled={
+                  deletingAccount ||
+                  deleteAccountPhrase !== ACCOUNT_DELETE_PHRASE ||
+                  !deleteAccountAuthHint ||
+                  (deleteAccountAuthHint === 'password' && !deleteAccountPassword.trim()) ||
+                  (deleteAccountAuthHint === 'email_confirm' &&
+                    deleteAccountEmailConfirm.trim().toLowerCase() !== (userEmail ?? '').trim().toLowerCase())
+                }
                 onClick={() => void handleDeleteAccount()}
                 className="flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-red-700 px-4 py-3 text-sm font-semibold text-white hover:bg-red-800 disabled:opacity-50 sm:flex-1"
               >
@@ -1924,6 +2050,9 @@ export default function FrauenweilerDorfApp() {
                 onClick={() => {
                   setShowDeleteAccountModal(false);
                   setDeleteAccountPhrase('');
+                  setDeleteAccountPassword('');
+                  setDeleteAccountEmailConfirm('');
+                  setDeleteAccountAuthHint(null);
                 }}
                 className="min-h-12 w-full rounded-2xl border border-zinc-200 px-4 py-3 text-sm font-medium text-[#475569] hover:bg-zinc-50 sm:flex-1"
               >
