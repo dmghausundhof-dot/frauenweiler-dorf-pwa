@@ -123,6 +123,18 @@ export const historyChronicle50: HistoryChronicleEdition = {
         'Nachbarschaftshilfe, Kleingartenarbeit und erste Straßenzüge (u. a. Kleinfeldstraße, Frauenweilerweg als frühes Wachstum in den folgenden Jahrzehnten) gehören zu den dokumentierten Sozialgeschichten; Vereine wie FC und Kleintiervzucht werden skizziert.',
       tags: ['Städtebau', 'Nachbarschaft'],
     },
+    {
+      headline: '„Waggonia“ und Heimstättengesellschaft',
+      takeaway:
+        'Die Festschrift beschreibt die Notunterbringung in ausgerangierten Eisenbahnwaggons sowie die Heimstättengesellschaft Wiesloch mbH mit Beteiligung mehrerer Gemeinden und regionaler Industriebetriebe (Ton-, Metall-, Baustofffirmen) als Träger des Kleinwohnungsbaus.',
+      tags: ['Wohnungsnot', '1930er'],
+    },
+    {
+      headline: 'Auflösung 1526 im Urkundenfluss',
+      takeaway:
+        'Auszüge zitieren die pfälzische Verfügung, Umsiedlung nach Wiesloch, Fortführung von Feldbesitz und die Verlagerung des Jahrmarkts – mit Verweis auf humane Rahmenbedingungen der Umsiedlung im damaligen Rechtsrahmen.',
+      tags: ['Mittelalter', 'Recht'],
+    },
   ],
   notableQuotes: [
     {
@@ -184,6 +196,18 @@ export const historyChronicle75: HistoryChronicleEdition = {
         'Serienbeiträge u. a. zu Stadtteilverein, Gesang-, Fußball-, Kleintiervzucht-, Spielmanns-/Fanfaren-, Volkstanz-, Gymnastik-, Tennisclubs, Wanderfreunden und geschichtlicher Kurzvortrag „Mittelalterliches Bügeleisen“. Chronik dokumentiert Mitgliedszahlen dort jeweilig.',
       tags: ['Vereinsleben', 'Kultur'],
     },
+    {
+      headline: 'Schule: Schulleitung und Alltag',
+      takeaway:
+        'Die Chronik schildert u. a. die Übernahme der Schulleitung durch Frau Maria Thiemann (1972) und beschreibt pädagogisches Klima sowie Zusammenarbeit im Kollegium – Beispiel für institutionelle Verankerung des Stadtteils.',
+      tags: ['Bildung', '1960er–1980er'],
+    },
+    {
+      headline: 'Kirchenalltag und Fronleichnam',
+      takeaway:
+        'Neben Baugeschichte werden Prozessionsstationen, Chöre, Jungschar und ehrenamtliche Akteure (u. a. Kantinen- und Bibliotheksarbeit) als religiöses Sozialgeflecht dargestellt – mit konkreten Straßennamen in der Broschüre.',
+      tags: ['Kirche', 'Brauchtum'],
+    },
   ],
   notableQuotes: [
     {
@@ -232,6 +256,13 @@ export const historyEditionComparison: HistoryEditionComparisonAxis[] = [
 /** Über Chroniken und Stadtkontext konsolidierte Stichdaten (chronologische Lesereihenfolge). */
 export const historyMilestoneTable: HistoryMilestoneRow[] = [
   {
+    year: '1287',
+    title: 'Erste „frawenwilre“-Spur (Schenkungsurkunde)',
+    detail:
+      'Die deutschsprachige Wikipedia nennt diese frühe Erwähnung; die Chronik 2012 arbeitet stark mit der jahrgenauen Form „villa Frawenwilre“ von 1333 und den Schönauer „wilre“-Einträgen 1293/94 — je nach Fragestellung beide Quellenstränge prüfen.',
+    attribution: 'Wikipedia „Frauenweiler“; Chronik 2012',
+  },
+  {
     year: '1293/94',
     title: 'Frühe Weiler-Spur im Schreibgut',
     detail:
@@ -244,6 +275,13 @@ export const historyMilestoneTable: HistoryMilestoneRow[] = [
     detail:
       'Als „villa Frawenwilre juxta Wissenloch“ überliefert; Flurname und geografische Nachbarschaft dort ausgeführt.',
     attribution: 'Festschrift/Chronik 2012',
+  },
+  {
+    year: '1441',
+    title: 'Marktrecht am Fest Mariä Verkündigung',
+    detail:
+      'Erstmals belegtes Marktrecht; der Jahrmarkt am 25. März wird in der Forschung mit Wallfahrtsdebatten und der Schwefelquelle in Verbindung gebracht (Wikipedia, mit Literatur).',
+    attribution: 'Wikipedia „Frauenweiler“',
   },
   {
     year: 'nach 1480',
@@ -260,6 +298,13 @@ export const historyMilestoneTable: HistoryMilestoneRow[] = [
     attribution: 'Festschrift/Chronik; Wikipedia Wiesloch',
   },
   {
+    year: '1767',
+    title: 'Kurquelle / Kurbrunnen',
+    detail:
+      'Wiederentdeckung und Fassung der Schwefelquelle; kurzeitig größere Badepläne, später Trinkkuren bis ins frühe 20. Jahrhundert (Stadtportrait Wiesloch / Wikipedia).',
+    attribution: 'Stadt Wiesloch; Wikipedia',
+  },
+  {
     year: '1936–37',
     title: 'Ankündigung, Planwerk und Neustart der Siedlung',
     detail:
@@ -272,6 +317,13 @@ export const historyMilestoneTable: HistoryMilestoneRow[] = [
     detail:
       'Chroniken begleiten Gottesdienste in Kantinenräumen bis zu Spatenstich und dokumentierter Grundsteinlegung 1951.',
     attribution: 'Festschrift 1987',
+  },
+  {
+    year: '1948–1954',
+    title: 'Versuchsbergbau am Gänsberg',
+    detail:
+      'Die Stadt Wiesloch erwähnt Versuchsbergbau auf Blei-Zink-Erzen; die Erze waren ölimprägniert und wirtschaftlich nicht nutzbar — zugleich wird das Versiegen des Kurbrunnens mit dem Stollenvortrieb in Verbindung gebracht.',
+    attribution: 'Stadt Wiesloch (Stadtteilseite Frauenweiler)',
   },
   {
     year: '1962',
@@ -367,6 +419,7 @@ export interface HistoryThemeBlock {
 
 /** Sprungmarken für die Geschichtsseite (Anker ohne Client-JS) */
 export const historyPageAnchors = [
+  { id: 'lesepfad', label: 'Lesebogen' },
   { id: 'chroniken', label: 'Chroniken (PDF)' },
   { id: 'editionen', label: '1987 vs. 2012' },
   { id: 'meilensteine', label: 'Meilensteine' },
@@ -495,11 +548,47 @@ export const historyFurtherLinks: HistoryFurtherLink[] = [
     external: true,
   },
   {
-    href: 'https://nominatim.openstreetmap.org/ui/search.html?q=Frauenweiler%2C%20Wiesloch',
-    label: 'OSM Suchtreffer „Frauenweiler, Wiesloch“',
-    description: 'Hilft, Relationen/Wege je nach Zoom zu finden – nützlich vor Fußtouren.',
+    href: 'https://de.wikipedia.org/wiki/Frauenweiler',
+    label: 'Wikipedia „Frauenweiler“',
+    description:
+      'Überblickt Mittelalterort, Markt, Auflösung 1526, Neugründung 1937, Waggonia und Literaturhinweise — sinnvoll neben den Vereins-PDFs.',
     external: true,
   },
+  {
+    href: 'https://www.wiesloch.de/stadt--aktuelles/stadtteile/frauenweiler',
+    label: 'Stadt Wiesloch – Stadtteilseite',
+    description:
+      'Amtliches Kurzporträt mit Gänsberg-Sage, Kurbrunnen, Versuchsbergbau und Verweis auf die Handy-Tour (Stationen 23/24).',
+    external: true,
+  },
+  {
+    href: 'https://www.wiesloch.de/kultur--freizeit/rad-und-wanderwege/handytour',
+    label: 'Handy-Tour Wiesloch',
+    description: 'Audio- und Textstationen zu Orten der Stadt, u. a. Frauenweiler.',
+    external: true,
+  },
+  {
+    href: 'https://www.leo-bw.de/web/guest/detail-gis/-/Detail/details/ORT/labw_ortslexikon/6620/Frauenweiler+-+Wohnplatz',
+    label: 'LEO-BW (Ortslexikon)',
+    description: 'Landeskundliche Kurzinformation zum Wohnplatz im regionalen Lexikon.',
+    external: true,
+  },
+  {
+    href: 'https://nominatim.openstreetmap.org/ui/search.html?q=Frauenweiler%2C%20Wiesloch',
+    label: 'OSM-Suche „Frauenweiler, Wiesloch“',
+    description: 'Hilft, Kartenrelationen und Wege je nach Zoom zu finden – nützlich vor Fußtouren.',
+    external: true,
+  },
+];
+
+/** Fließtext-Lesebogen: Zusammenführung der Chroniken mit freien Web-Quellen (paraphrasiert). */
+export const historyNarrativeOverview: string[] = [
+  'Frauenweiler ist heute ein Stadtteil von Wiesloch – geografisch westlich der historischen Weilersiedlung am Gänsberg. Der mittelalterliche Ort wuchs aus Höfen und Marienpatrozinium heraus, erlangte Markt und kirchliche Ausstrahlung und wurde 1526 aufgehoben; Flurnamen und wenige Bodendenkmäler halten die Erinnerung wach, wie Vereinschronik und Wikipedia gemeinsam skizzieren.',
+  'Die heutige Bebauung entstand ab 1937 als geplante Kleinwohnungs- und Stammarbeitersiedlung unter den Bedingungen der Zeit: Wohnungsnot, „Waggonia“-Notlösungen und Heimstättengesellschaften mit regionalen Arbeitgebern prägten den Start, den die Festschrift 1987 ausführlich und reflektiert dokumentiert.',
+  'Nach dem Zweiten Weltkrieg folgten kirchliche und soziale Meilensteine: von der Kantinen-Gottesdienstphase bis zu Spatenstich und Kirchenweihe, dazu Kindergarten (1962) und Grundschule (1969/70) als tragende Infrastruktur – alles Kapitel, die sowohl die Broschüre 1987 als auch die Chronik 2012 fortschreiben.',
+  'Die Chronik 2012 verdichtet Archäologie und Topographie: Sandgruben, Bahndurchstich und das Glockenbecher-Hockergrab am Eichelweg belegen eine durchgängig genutzte Landschaftsschicht; römische und alamannische Funde sowie fränkische Bestattungen fügen sich zu einem langen Band über der Gemarkung.',
+  'Der Stadtteilverein bündelt heute das bunte Vereinsleben; die Chronik listet Gesang, Sport, Feuerwehr, Kirchen, Kita und Politikformat WGF als Beispiele strukturierten Ehrenamts. Für aktuelle Termine und Bildrechte bleiben Vereinswebsite und PDFs die erste Anlaufstelle.',
+  'Ergänzend helfen die Stadt Wiesloch (Stadtteilseite), Wikipedia und LEO-BW bei Orientierung zu Sage, Kurbrunnen, Bergbauversuchen am Gänsberg und zur Einbettung in den Rhein-Neckar-Raum — ohne die detailreiche Personen- und Vereinsgeschichte der gedruckten Chroniken zu ersetzen.',
 ];
 
 export interface HistoryYearSpotlight {

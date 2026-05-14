@@ -29,12 +29,13 @@ import {
   historyChronicle75,
   historyEditionComparison,
   historyMilestoneTable,
+  historyNarrativeOverview,
 } from '@/lib/dorfapp/history-content';
 
 export const metadata: Metadata = {
   title: 'Geschichte | Frauenweiler DorfApp',
   description:
-    'Zeitstrahl, Themen, Zahlen und Chroniken zur Geschichte Frauenweilers – mit PDF-Links zu den Vereinsbroschüren 1987 und 2012.',
+    'Ausführlicher Lesebogen: Festschrift 1987, Chronik 2012, Meilensteine, Zeitstrahl und Themen zu Frauenweiler bei Wiesloch – mit PDF- und Web-Quellen.',
   keywords: [
     'Frauenweiler',
     'Wiesloch',
@@ -42,8 +43,33 @@ export const metadata: Metadata = {
     'Chronik',
     'Stadtteilverein',
     'Siedlerbund',
+    '75 Jahre',
+    '50 Jahre',
   ],
 };
+
+/** Einheitliche Bildrahmen: festes Seitenverhältnis, kein Stauchen (object-contain). */
+function GeschichteFigureImage({
+  src,
+  alt,
+  aspectClassName = 'aspect-[4/3]',
+  maxClassName = 'max-w-md',
+  sizes = '(max-width: 640px) 92vw, 28rem',
+}: {
+  src: string;
+  alt: string;
+  aspectClassName?: string;
+  maxClassName?: string;
+  sizes?: string;
+}) {
+  return (
+    <div
+      className={`relative w-full overflow-hidden rounded-lg bg-zinc-200/90 ${aspectClassName} ${maxClassName} mx-auto`}
+    >
+      <Image src={src} alt={alt} fill sizes={sizes} className="object-contain object-center" />
+    </div>
+  );
+}
 
 export default function GeschichtePage() {
   return (
@@ -100,6 +126,24 @@ export default function GeschichtePage() {
           </ul>
         </nav>
 
+        <section id="lesepfad" className="mt-10 scroll-mt-24" aria-labelledby="geschichte-h-lesepfad">
+          <h2 id="geschichte-h-lesepfad" className="text-lg font-semibold text-zinc-900">
+            Geschichte in einem Lesebogen
+          </h2>
+          <p className="mt-2 text-sm text-zinc-600">
+            Kurz gefasst für die DorfApp — im Detail und mit Abbildungen die PDF-Chroniken beim{' '}
+            <a href="https://frauenweiler.org/" className="font-medium text-[#166534] underline underline-offset-2">
+              Stadtteilverein
+            </a>{' '}
+            öffnen.
+          </p>
+          <div className="mt-4 space-y-4 rounded-2xl border border-zinc-200 bg-white p-5 text-sm leading-relaxed text-zinc-700 shadow-sm">
+            {historyNarrativeOverview.map((p, i) => (
+              <p key={i}>{p}</p>
+            ))}
+          </div>
+        </section>
+
         {/* PDF-Quellen */}
         <section id="chroniken" className="mt-12 scroll-mt-24" aria-labelledby="geschichte-h-chroniken">
           <h2 id="geschichte-h-chroniken" className="flex items-center gap-2 text-lg font-semibold text-zinc-900">
@@ -150,13 +194,12 @@ export default function GeschichtePage() {
             {[historyChronicle50, historyChronicle75].map((edition) => (
               <article key={edition.id} className="dorf-card overflow-hidden flex flex-col">
                 {edition.coverImageSrc && edition.coverImageAlt && (
-                  <div className="relative aspect-[16/10] border-b border-zinc-100 bg-zinc-100">
+                  <div className="relative aspect-[16/10] w-full border-b border-zinc-100 bg-zinc-200/80">
                     <Image
                       src={edition.coverImageSrc}
                       alt={edition.coverImageAlt}
-                      width={800}
-                      height={500}
-                      className="h-full w-full object-cover object-center"
+                      fill
+                      className="object-contain object-center"
                       sizes="(max-width: 1024px) 100vw, 50vw"
                     />
                   </div>
@@ -370,16 +413,9 @@ export default function GeschichtePage() {
                 <h3 className="mt-1 text-lg font-semibold text-zinc-900">{entry.title}</h3>
                 <p className="mt-2 text-sm leading-relaxed text-zinc-600">{entry.body}</p>
                 {entry.imageSrc && entry.imageAlt && (
-                  <figure className="mt-4 max-w-sm overflow-hidden rounded-xl border border-zinc-200 bg-zinc-100">
-                    <Image
-                      src={entry.imageSrc}
-                      alt={entry.imageAlt}
-                      width={640}
-                      height={427}
-                      className="h-auto w-full object-cover"
-                      sizes="(max-width: 640px) 90vw, 384px"
-                    />
-                    <figcaption className="border-t border-zinc-100 bg-white px-3 py-2 text-xs text-zinc-500">
+                  <figure className="mt-4 max-w-md">
+                    <GeschichteFigureImage src={entry.imageSrc} alt={entry.imageAlt} />
+                    <figcaption className="mt-2 border-t border-zinc-100 px-1 pt-2 text-xs text-zinc-500">
                       {entry.imageAlt}
                     </figcaption>
                   </figure>
@@ -422,15 +458,16 @@ export default function GeschichtePage() {
               className={`dorf-card overflow-hidden sm:grid ${block.imageSrc ? 'sm:grid-cols-[minmax(0,200px)_1fr] sm:gap-0' : ''}`}
             >
               {block.imageSrc && block.imageAlt && (
-                <div className="relative aspect-[4/3] max-h-44 border-b border-zinc-100 bg-zinc-100 sm:aspect-auto sm:max-h-none sm:min-h-0 sm:border-b-0 sm:border-r">
-                  <Image
-                    src={block.imageSrc}
-                    alt={block.imageAlt}
-                    width={480}
-                    height={360}
-                    className="h-full w-full object-cover object-center"
-                    sizes="(max-width: 640px) 100vw, 200px"
-                  />
+                <div className="flex min-h-[12rem] items-center justify-center border-b border-zinc-100 bg-zinc-100 p-3 sm:min-h-0 sm:border-b-0 sm:border-r">
+                  <div className="relative aspect-[3/4] w-full max-w-[min(100%,220px)] sm:max-h-[min(100%,26rem)] sm:max-w-[200px]">
+                    <Image
+                      src={block.imageSrc}
+                      alt={block.imageAlt}
+                      fill
+                      sizes="(max-width: 640px) 70vw, 200px"
+                      className="object-contain object-center"
+                    />
+                  </div>
                 </div>
               )}
               <div className="p-6 sm:flex sm:flex-col sm:justify-center">
