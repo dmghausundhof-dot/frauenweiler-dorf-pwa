@@ -1,11 +1,13 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import Link from 'next/link';
 import {
   Calendar, Users, Vote, Home, User, Bell, Plus,
   MapPin, Clock, Heart, Check, LogIn, Shield,
   Mail, Pencil, KeyRound, Loader2, Save,
   Handshake, ExternalLink, Menu, Instagram, Facebook, Youtube, X, Share2, Trash2,
+  BookOpen,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
@@ -1035,6 +1037,15 @@ export default function FrauenweilerDorfApp() {
                   </button>
                 );
               })}
+              <div className="mx-2 my-3 border-t border-zinc-200" role="presentation" />
+              <Link
+                href="/geschichte"
+                onClick={() => setNavDrawerOpen(false)}
+                className="flex w-full items-center gap-3 rounded-2xl px-4 py-3.5 text-left text-base font-medium text-zinc-700 active:bg-zinc-100"
+              >
+                <BookOpen className="h-5 w-5 shrink-0 opacity-90 text-[#166534]" aria-hidden />
+                Geschichte
+              </Link>
               {isLoggedIn && isAdmin && (
                 <>
                   <div className="mx-2 my-3 border-t border-zinc-200" role="presentation" />
@@ -1133,6 +1144,13 @@ export default function FrauenweilerDorfApp() {
                     <span className="font-semibold text-sm text-center">{action.label}</span>
                   </button>
                 ))}
+                <Link
+                  href="/geschichte"
+                  className="dorf-card p-5 flex flex-col items-center justify-center gap-3 border-2 border-dashed border-[#166534]/25 bg-[#f0fdf4]/40 active:scale-[0.985] transition-all hover:bg-[#f0fdf4]"
+                >
+                  <BookOpen className="w-8 h-8 text-[#166534]" aria-hidden />
+                  <span className="font-semibold text-sm text-center text-[#14532d]">Geschichte</span>
+                </Link>
                 {isLoggedIn && isAdmin && (
                   <button
                     type="button"
@@ -1166,6 +1184,13 @@ export default function FrauenweilerDorfApp() {
                 Kerwe, FW hilft, Hofflohmarkt, Geschichte und mehr – auf der Website des Stadtteilvereins.
               </p>
               <div className="flex flex-wrap gap-2">
+                <Link
+                  href="/geschichte"
+                  className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-full bg-white border border-[#166534]/35 text-[#14532d] hover:bg-[#f0fdf4]"
+                >
+                  <BookOpen className="w-3 h-3 shrink-0" aria-hidden />
+                  Geschichte (App)
+                </Link>
                 {['Kerwe & Feste', 'FW hilft', 'Projekte', 'Kontakt'].map((label) => (
                   <a
                     key={label}
