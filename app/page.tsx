@@ -878,19 +878,9 @@ export default function FrauenweilerDorfApp() {
 
   return (
     <div className="min-h-screen bg-zinc-50 pb-28">
-      {/* Header — mobile first: Menü links, große Klickflächen */}
+      {/* Header — ohne Menü-Duplikat (Menü nur in der unteren Leiste) */}
       <header className="sticky top-0 z-50 border-b border-zinc-200 bg-white/95 backdrop-blur safe-area-pt">
         <div className="mx-auto flex max-w-2xl items-center gap-2 px-3 py-2.5 sm:px-4">
-          <button
-            type="button"
-            aria-expanded={navDrawerOpen}
-            aria-label="Menü öffnen"
-            onClick={() => setNavDrawerOpen(true)}
-            className="tap-target flex shrink-0 items-center justify-center rounded-2xl border border-zinc-200 bg-white text-zinc-800 active:bg-zinc-100"
-          >
-            <Menu className="h-6 w-6" strokeWidth={2} />
-          </button>
-
           <button
             type="button"
             onClick={() => {
