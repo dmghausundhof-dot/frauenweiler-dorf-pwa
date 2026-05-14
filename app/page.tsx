@@ -5,7 +5,7 @@ import {
   Calendar, Users, Vote, Home, User, Bell, Plus,
   MapPin, Clock, Heart, Check, LogIn, Shield,
   Mail, Pencil, KeyRound, Loader2, Save,
-  Handshake, ExternalLink,
+  Handshake, ExternalLink, Menu, Instagram, Facebook, Youtube, X, Share2,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
@@ -19,6 +19,7 @@ import {
   type HelpRequest,
   loadVillageDataFromSupabase,
 } from '@/lib/dorfapp/village-data';
+import { parseSocialLinksInput, labelForSocialUrl } from '@/lib/dorfapp/social-links';
 
 interface Poll {
   id: string;
@@ -35,10 +36,62 @@ const mockEvents: Event[] = [
 ];
 
 const mockNews: NewsItem[] = [
-  { id: '1', title: "Neue Bank auf dem Dorfplatz", content: "Die neue Sitzbank am Spielplatz ist aufgestellt. Vielen Dank an alle Spender!", category: "Allgemein", important: false, date: "2026-05-12" },
-  { id: '2', title: "Kerwe 2026 – Helfer gesucht!", content: "Wir suchen noch Helfer für den Auf- und Abbau der Kerwe. Meldet euch bitte beim Ortsverein.", category: "Verein", important: true, date: "2026-05-10" },
-  { id: '3', title: "Straßenfest am 14. Juni", content: "Save the Date! Unser großes Dorffest findet am 14. Juni statt. Mehr Infos folgen.", category: "Fest", important: true, date: "2026-05-08" },
+  { id: '1', title: "Neue Bank auf dem Dorfplatz", content: "Die neue Sitzbank am Spielplatz ist aufgestellt. Vielen Dank an alle Spender!", category: "Allgemein", important: false, date: "2026-05-12", socialLinks: [] },
+  {
+    id: '2',
+    title: "Kerwe 2026 – Helfer gesucht!",
+    content: "Wir suchen noch Helfer für den Auf- und Abbau der Kerwe. Meldet euch bitte beim Ortsverein.",
+    category: "Verein",
+    important: true,
+    date: "2026-05-10",
+    socialLinks: ['https://www.instagram.com/'],
+  },
+  { id: '3', title: "Straßenfest am 14. Juni", content: "Save the Date! Unser großes Dorffest findet am 14. Juni statt. Mehr Infos folgen.", category: "Fest", important: true, date: "2026-05-08", socialLinks: [] },
 ];
+
+function SocialLinkIcon({ url }: { url: string }) {
+  const u = url.toLowerCase();
+  if (u.includes('instagram.')) return <Instagram className="w-4 h-4 shrink-0" aria-hidden />;
+  if (u.includes('facebook.') || u.includes('fb.com')) return <Facebook className="w-4 h-4 shrink-0" aria-hidden />;
+  if (u.includes('youtube.') || u.includes('youtu.be')) return <Youtube className="w-4 h-4 shrink-0" aria-hidden />;
+  if (u.includes('twitter.') || u.includes('x.com')) return <X className="w-4 h-4 shrink-0" aria-hidden />;
+  return <Share2 className="w-4 h-4 shrink-0" aria-hidden />;
+}
+
+function NewsSocialChips({
+  links,
+  stopLinkPropagation,
+  className = 'mt-3 flex flex-wrap gap-2',
+}: {
+  links: string[];
+  stopLinkPropagation?: boolean;
+  className?: string;
+}) {
+  if (!links.length) return null;
+  const stop = stopLinkPropagation
+    ? (e: React.MouseEvent) => {
+        e.stopPropagation();
+      }
+    : undefined;
+  return (
+    <div className={className}>
+      {links.map((url) => (
+        <a
+          key={url}
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={stop}
+          className="inline-flex min-h-11 min-w-0 max-w-full items-center gap-2 rounded-full border border-[#166534]/25 bg-[#f0fdf4] px-3 py-2 text-xs font-semibold text-[#14532d] active:bg-[#dcfce7]"
+        >
+          <SocialLinkIcon url={url} />
+          <span className="truncate">{labelForSocialUrl(url)}</span>
+          <ExternalLink className="w-3 h-3 shrink-0 opacity-60" aria-hidden />
+        </a>
+      ))}
+    </div>
+  );
+}
 
 const mockPolls: Poll[] = [
   {
@@ -100,6 +153,7 @@ export default function FrauenweilerDorfApp() {
   const [userId, setUserId] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [showAdminModal, setShowAdminModal] = useState(false);
+  const [navDrawerOpen, setNavDrawerOpen] = useState(false);
   const [adminTab, setAdminTab] = useState<'news' | 'event' | 'contribution'>('news');
 
   const [events, setEvents] = useState(mockEvents);
@@ -136,7 +190,7 @@ export default function FrauenweilerDorfApp() {
   const [activityCounts, setActivityCounts] = useState<{ contributions: number; pollVotes: number } | null>(null);
 
   // Admin form states
-  const [newNews, setNewNews] = useState({ title: '', content: '', category: 'Allgemein', important: false });
+  const [newNews, setNewNews] = useState({ title: '', content: '', category: 'Allgemein', important: false, socialLinksRaw: '' });
   const [newEvent, setNewEvent] = useState({ title: '', description: '', date: '', time: '', location: '', category: 'Fest' });
   const [newContribution, setNewContribution] = useState({ eventId: '', type: 'mitbringen' as 'mitbringen' | 'helfen', description: '', needed: 1 });
   const [selectedEventForNewContrib, setSelectedEventForNewContrib] = useState('');
@@ -214,6 +268,20 @@ export default function FrauenweilerDorfApp() {
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  useEffect(() => {
+    if (!navDrawerOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setNavDrawerOpen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => {
+      document.body.style.overflow = prev;
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [navDrawerOpen]);
 
   useEffect(() => {
     if (!useSupabase || !userId) {
@@ -540,12 +608,15 @@ export default function FrauenweilerDorfApp() {
       return;
     }
 
+    const socialLinks = parseSocialLinksInput(newNews.socialLinksRaw);
+
     if (useSupabase) {
       const { error } = await supabase.from('news').insert({
         title: newNews.title,
         content: newNews.content,
         category: newNews.category,
         important: newNews.important,
+        social_links: socialLinks,
       });
       if (error) {
         toast.error('Fehler beim Erstellen der News', { description: error.message });
@@ -559,12 +630,13 @@ export default function FrauenweilerDorfApp() {
         content: newNews.content,
         category: newNews.category,
         important: newNews.important,
-        date: new Date().toISOString().split('T')[0]
+        date: new Date().toISOString().split('T')[0],
+        socialLinks,
       }, ...prev]);
     }
 
     toast.success('News erfolgreich erstellt!');
-    setNewNews({ title: '', content: '', category: 'Allgemein', important: false });
+    setNewNews({ title: '', content: '', category: 'Allgemein', important: false, socialLinksRaw: '' });
     setShowAdminModal(false);
     if (useSupabase) await refreshVillageData();
   };
@@ -689,39 +761,134 @@ export default function FrauenweilerDorfApp() {
   }, [helpRequests, helpFilter]);
 
   return (
-    <div className="min-h-screen bg-zinc-50 pb-20">
-      {/* Header */}
-      <header className="bg-white border-b sticky top-0 z-50">
-        <div className="max-w-2xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-[#166534] rounded-2xl flex items-center justify-center">
-              <Home className="w-5 h-5 text-white" />
+    <div className="min-h-screen bg-zinc-50 pb-28">
+      {/* Header — mobile first: Menü links, große Klickflächen */}
+      <header className="sticky top-0 z-50 border-b border-zinc-200 bg-white/95 backdrop-blur safe-area-pt">
+        <div className="mx-auto flex max-w-2xl items-center gap-2 px-3 py-2.5 sm:px-4">
+          <button
+            type="button"
+            aria-expanded={navDrawerOpen}
+            aria-label="Menü öffnen"
+            onClick={() => setNavDrawerOpen(true)}
+            className="tap-target flex shrink-0 items-center justify-center rounded-2xl border border-zinc-200 bg-white text-zinc-800 active:bg-zinc-100"
+          >
+            <Menu className="h-6 w-6" strokeWidth={2} />
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setActiveTab('home');
+              setNavDrawerOpen(false);
+            }}
+            className="flex min-w-0 flex-1 items-center gap-2.5 rounded-2xl py-1 text-left active:bg-zinc-50"
+          >
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#166534]">
+              <Home className="h-5 w-5 text-white" />
             </div>
-            <div>
-              <div className="font-semibold text-xl tracking-tight">Frauenweiler</div>
-              <div className="text-xs text-[#166534] -mt-1">DorfApp</div>
+            <div className="min-w-0">
+              <div className="truncate text-base font-semibold tracking-tight text-zinc-900 sm:text-lg">Frauenweiler</div>
+              <div className="-mt-0.5 text-xs text-[#166534]">DorfApp</div>
             </div>
-          </div>
-          
-          <div className="flex items-center gap-2">
+          </button>
+
+          <div className="flex shrink-0 items-center gap-1.5">
             {isLoggedIn ? (
-              <button 
-                onClick={() => setActiveTab('profile')}
-                className="flex items-center gap-2 text-sm px-4 py-1.5 rounded-full bg-zinc-100 hover:bg-zinc-200"
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab('profile');
+                  setNavDrawerOpen(false);
+                }}
+                className="tap-target-sm flex max-w-[9rem] items-center gap-2 rounded-full bg-zinc-100 px-3 py-2 text-sm font-medium text-zinc-800 active:bg-zinc-200"
               >
-                <User className="w-4 h-4" /> {userName.split(' ')[0]}
+                <User className="h-4 w-4 shrink-0" />
+                <span className="truncate">{userName.split(' ')[0]}</span>
               </button>
             ) : (
-              <button 
-                onClick={() => setShowLogin(true)}
-                className="dorf-button text-sm px-5 py-2"
-              >
+              <button type="button" onClick={() => setShowLogin(true)} className="dorf-button tap-target-sm px-4 py-2.5 text-sm">
                 Anmelden
               </button>
             )}
           </div>
         </div>
       </header>
+
+      {/* Seitenmenü (Hamburger) — alle Bereiche ohne Tab-Leiste */}
+      {navDrawerOpen && (
+        <div className="fixed inset-0 z-[80]">
+          <button
+            type="button"
+            className="absolute inset-0 bg-black/45"
+            aria-label="Menü schließen"
+            onClick={() => setNavDrawerOpen(false)}
+          />
+          <nav
+            id="dorfapp-nav-drawer"
+            className="safe-area-pt safe-area-pb absolute right-0 top-0 flex h-full w-[min(100%,19.5rem)] flex-col border-l border-zinc-200 bg-white shadow-xl"
+          >
+            <div className="flex items-center justify-between border-b border-zinc-100 px-4 py-3">
+              <span className="text-sm font-semibold text-zinc-800">Navigation</span>
+              <button
+                type="button"
+                className="tap-target-sm flex items-center justify-center rounded-xl text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800"
+                aria-label="Schließen"
+                onClick={() => setNavDrawerOpen(false)}
+              >
+                <span className="text-xl leading-none">×</span>
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto px-2 py-2">
+              {(
+                [
+                  { id: 'home' as const, label: 'Start', icon: Home },
+                  { id: 'news' as const, label: 'News', icon: Bell },
+                  { id: 'events' as const, label: 'Termine', icon: Calendar },
+                  { id: 'polls' as const, label: 'Umfragen', icon: Vote },
+                  { id: 'contribute' as const, label: 'Mitmachen', icon: Heart },
+                  { id: 'help' as const, label: 'Frauenweiler hilft', icon: Handshake },
+                  { id: 'profile' as const, label: 'Profil', icon: User },
+                ] as const
+              ).map((item) => {
+                const Icon = item.icon;
+                const isActive = activeTab === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => {
+                      setActiveTab(item.id);
+                      setNavDrawerOpen(false);
+                      if (!isLoggedIn && item.id === 'contribute') {
+                        setSelectedEventForContrib(null);
+                        promptLogin('Wähle ein Event und melde dich an, um dich für Mitmach-Aktionen einzutragen.');
+                      }
+                    }}
+                    className={`flex w-full items-center gap-3 rounded-2xl px-4 py-3.5 text-left text-base font-medium transition-colors ${
+                      isActive ? 'bg-[#dcfce7] text-[#14532d]' : 'text-zinc-700 active:bg-zinc-100'
+                    }`}
+                  >
+                    <Icon className="h-5 w-5 shrink-0 opacity-90" />
+                    {item.label}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="border-t border-zinc-100 p-3">
+              <a
+                href="http://frauenweiler.org/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex min-h-12 items-center justify-center gap-2 rounded-2xl border border-[#166534]/30 bg-[#f0fdf4] px-4 py-3 text-sm font-semibold text-[#14532d]"
+                onClick={() => setNavDrawerOpen(false)}
+              >
+                <ExternalLink className="h-4 w-4 shrink-0" />
+                Vereins-Website
+              </a>
+            </div>
+          </nav>
+        </div>
+      )}
 
       {/* Main Content */}
       <main className="max-w-2xl mx-auto px-4 pt-6 pb-24">
@@ -733,7 +900,7 @@ export default function FrauenweilerDorfApp() {
               <div className="inline-flex items-center gap-2 bg-[#dcfce7] text-[#166534] px-4 py-1 rounded-full text-sm font-medium mb-3">
                 <MapPin className="w-4 h-4" /> Frauenweiler bei Wiesloch
               </div>
-              <h1 className="text-4xl font-semibold tracking-tighter">DorfApp Frauenweiler</h1>
+              <h1 className="text-3xl font-semibold tracking-tighter sm:text-4xl">DorfApp Frauenweiler</h1>
               <p className="text-[#64748b] mt-2 max-w-md mx-auto text-sm leading-relaxed">
                 Termine, Nachbarschaftshilfe, Umfragen und Mitmachen – ergänzend zum{' '}
                 <a
@@ -890,21 +1057,30 @@ export default function FrauenweilerDorfApp() {
                 </div>
                 <div className="space-y-3">
                   {homeNewsTeaser.map((item) => (
-                    <button
+                    <div
                       key={item.id}
-                      type="button"
-                      onClick={() => setActiveTab('news')}
-                      className="dorf-card w-full p-4 text-left hover:border-[#166534]/40 transition-colors"
+                      className="dorf-card w-full overflow-hidden text-left transition-colors hover:border-[#166534]/40"
                     >
-                      {item.important && (
-                        <div className="text-xs font-bold text-amber-600 mb-1">WICHTIG</div>
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab('news')}
+                        className="w-full p-4 text-left active:bg-zinc-50/80"
+                      >
+                        {item.important && (
+                          <div className="text-xs font-bold text-amber-600 mb-1">WICHTIG</div>
+                        )}
+                        <div className="font-semibold text-[#0f172a]">{item.title}</div>
+                        <p className="text-sm text-[#64748b] mt-1 line-clamp-2">{item.content}</p>
+                        <div className="text-xs text-[#94a3b8] mt-2">
+                          {item.date} · {item.category}
+                        </div>
+                      </button>
+                      {item.socialLinks.length > 0 && (
+                        <div className="border-t border-zinc-100 px-4 pb-4 pt-1" onClick={(e) => e.stopPropagation()}>
+                          <NewsSocialChips links={item.socialLinks} stopLinkPropagation className="flex flex-wrap gap-2" />
+                        </div>
                       )}
-                      <div className="font-semibold text-[#0f172a]">{item.title}</div>
-                      <p className="text-sm text-[#64748b] mt-1 line-clamp-2">{item.content}</p>
-                      <div className="text-xs text-[#94a3b8] mt-2">
-                        {item.date} · {item.category}
-                      </div>
-                    </button>
+                    </div>
                   ))}
                 </div>
               </div>
@@ -945,15 +1121,18 @@ export default function FrauenweilerDorfApp() {
         {/* NEWS TAB */}
         {activeTab === 'news' && (
           <div>
-            <h2 className="text-2xl font-semibold mb-6">Aktuelle Nachrichten</h2>
+            <h2 className="text-xl font-semibold mb-4 sm:text-2xl sm:mb-6">Aktuelle Nachrichten</h2>
             <div className="space-y-4">
-              {news.map(item => (
-                <div key={item.id} className="dorf-card p-5">
+              {news.map((item) => (
+                <article key={item.id} className="dorf-card p-5">
                   {item.important && <div className="text-xs font-bold text-amber-600 mb-1">WICHTIG</div>}
-                  <h3 className="font-semibold text-lg">{item.title}</h3>
-                  <p className="text-[#64748b] mt-1 text-sm">{item.content}</p>
-                  <div className="text-xs text-[#94a3b8] mt-3">{item.date} • {item.category}</div>
-                </div>
+                  <h3 className="text-lg font-semibold sm:text-xl">{item.title}</h3>
+                  <p className="text-[#64748b] mt-1 text-sm leading-relaxed">{item.content}</p>
+                  <NewsSocialChips links={item.socialLinks} />
+                  <div className="text-xs text-[#94a3b8] mt-3">
+                    {item.date} • {item.category}
+                  </div>
+                </article>
               ))}
             </div>
           </div>
@@ -1501,40 +1680,44 @@ export default function FrauenweilerDorfApp() {
         )}
       </main>
 
-      {/* Bottom Navigation (PWA Style) */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t z-50 safe-area-pb">
-        <div className="max-w-2xl mx-auto flex overflow-x-auto gap-0.5 px-1 py-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-          {(
-            [
-              { id: 'home', label: 'Start', icon: Home },
-              { id: 'news', label: 'News', icon: Bell },
-              { id: 'events', label: 'Termine', icon: Calendar },
-              { id: 'polls', label: 'Abstimmen', icon: Vote },
-              { id: 'contribute', label: 'Mitmachen', icon: Heart },
-              { id: 'help', label: 'Hilfe', icon: Handshake },
-              { id: 'profile', label: 'Profil', icon: User },
-            ] as const
-          ).map((item) => {
-            const Icon = item.icon;
-            const isActive = activeTab === item.id;
-            return (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => {
-                  setActiveTab(item.id as Tab);
-                  if (!isLoggedIn && item.id === 'contribute') {
-                    setSelectedEventForContrib(null);
-                    promptLogin('Wähle ein Event und melde dich an, um dich für Mitmach-Aktionen einzutragen.');
-                  }
-                }}
-                className={`nav-item min-w-[3.65rem] shrink-0 py-2.5 px-0.5 ${isActive ? 'active' : 'text-[#64748b]'}`}
-              >
-                <Icon className="w-5 h-5 mx-auto" />
-                <span className="text-[10px] leading-tight mt-0.5 block">{item.label}</span>
-              </button>
-            );
-          })}
+      {/* Schnellzugriff unten: Daumenreichweite, Rest über Menü */}
+      <nav
+        className="safe-area-pb fixed bottom-0 left-0 right-0 z-50 border-t border-zinc-200 bg-white/95 backdrop-blur-sm"
+        aria-label="Hauptnavigation"
+      >
+        <div className="mx-auto grid max-w-2xl grid-cols-3 gap-1 px-2 py-2">
+          <button
+            type="button"
+            onClick={() => setActiveTab('home')}
+            className={`flex min-h-14 flex-col items-center justify-center gap-0.5 rounded-2xl text-xs font-semibold ${
+              activeTab === 'home' ? 'bg-[#dcfce7] text-[#14532d]' : 'text-zinc-600 active:bg-zinc-100'
+            }`}
+          >
+            <Home className="h-6 w-6" />
+            Start
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('events')}
+            className={`flex min-h-14 flex-col items-center justify-center gap-0.5 rounded-2xl text-xs font-semibold ${
+              activeTab === 'events' ? 'bg-[#dcfce7] text-[#14532d]' : 'text-zinc-600 active:bg-zinc-100'
+            }`}
+          >
+            <Calendar className="h-6 w-6" />
+            Termine
+          </button>
+          <button
+            type="button"
+            onClick={() => setNavDrawerOpen(true)}
+            className={`flex min-h-14 flex-col items-center justify-center gap-0.5 rounded-2xl text-xs font-semibold ${
+              navDrawerOpen ? 'bg-zinc-200 text-zinc-900' : 'text-zinc-600 active:bg-zinc-100'
+            }`}
+            aria-expanded={navDrawerOpen}
+            aria-label="Menü öffnen"
+          >
+            <Menu className="h-6 w-6" />
+            Menü
+          </button>
         </div>
       </nav>
 
@@ -1726,6 +1909,21 @@ export default function FrauenweilerDorfApp() {
                   rows={4}
                   className="w-full border rounded-2xl px-5 py-3 resize-y" 
                 />
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-[#64748b]">
+                    Social / Web (optional, eine vollständige URL pro Zeile)
+                  </label>
+                  <textarea
+                    placeholder={`https://www.instagram.com/p/…\nhttps://www.facebook.com/…`}
+                    value={newNews.socialLinksRaw}
+                    onChange={(e) => setNewNews({ ...newNews, socialLinksRaw: e.target.value })}
+                    rows={3}
+                    className="w-full resize-y rounded-2xl border px-5 py-3 text-sm"
+                  />
+                  <p className="mt-1 text-xs text-[#94a3b8]">
+                    Einfach Post-Links von Instagram, Facebook, YouTube usw. einfügen – es werden nur gültige http(s)-URLs übernommen.
+                  </p>
+                </div>
                 <div className="flex gap-3">
                   <select 
                     value={newNews.category} 

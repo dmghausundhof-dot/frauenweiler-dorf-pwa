@@ -74,6 +74,7 @@ CREATE TABLE IF NOT EXISTS news (
   content TEXT NOT NULL,
   category TEXT DEFAULT 'Allgemein',
   important BOOLEAN DEFAULT FALSE,
+  social_links JSONB NOT NULL DEFAULT '[]'::jsonb,
   created_by UUID REFERENCES auth.users(id),
   created_at TIMESTAMPTZ DEFAULT NOW()
 );

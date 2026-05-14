@@ -28,6 +28,8 @@ export interface NewsItem {
   category: string;
   important: boolean;
   date: string;
+  /** URLs zu Social-Media oder Web (Instagram, Facebook, …) */
+  socialLinks: string[];
 }
 
 export interface Contribution {
@@ -48,6 +50,11 @@ export interface HelpRequest {
   category: string;
   status: 'open' | 'done' | 'cancelled';
   createdAt: string;
+}
+
+function socialLinksFromRow(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.filter((x): x is string => typeof x === 'string' && /^https?:\/\//i.test(x));
 }
 
 export async function loadVillageDataFromSupabase(): Promise<{
@@ -89,6 +96,7 @@ export async function loadVillageDataFromSupabase(): Promise<{
       category: (row.category as string) || 'Allgemein',
       important: !!(row.important as boolean),
       date: ((row.created_at as string) || '').split('T')[0] || '',
+      socialLinks: socialLinksFromRow((row as { social_links?: unknown }).social_links),
     })) ?? [];
 
   const countBy = new Map<string, number>();
