@@ -62,6 +62,7 @@ const mockEvents: Event[] = [
     attendees: 87,
     description:
       'Die Kerwe vom 25.-27. Juli 2026 soll ein besonderes Fest für Frauenweiler und die Region werden. Wegen des anschließenden Baubeginns an der Grundschule könnte sie vorerst die letzte Kerwe in dieser Form sein.',
+    image_url: '/kerwe-2026.svg',
   },
   { id: '2', title: "Feuerwehrübung & Tag der offenen Tür", date: "2026-05-24", time: "10:00", location: "Feuerwehrhaus", category: "Feuerwehr", attendees: 34, description: "Vorstellung der neuen Drehleiter und Übung für die Jugendfeuerwehr." },
   { id: '3', title: "Ortsverein Sitzung + Grillen", date: "2026-05-20", time: "19:30", location: "Vereinsheim", category: "Verein", attendees: 19, description: "Monatliche Sitzung des Ortsvereins mit anschließendem Grillen." },
@@ -1379,12 +1380,14 @@ export default function FrauenweilerDorfApp() {
                 </div>
                 <div className="dorf-card p-5 overflow-hidden">
                   {nextEventHighlight.image_url && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={nextEventHighlight.image_url}
-                      alt=""
-                      className="w-full h-36 object-cover rounded-xl mb-4 -mt-1"
-                    />
+                    <div className="mb-4 -mt-1 overflow-hidden rounded-xl border border-amber-100 bg-gradient-to-br from-amber-50 to-[#dcfce7] p-2">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={nextEventHighlight.image_url}
+                        alt={isKerweEvent(nextEventHighlight) ? 'Kerwe Frauenweiler 2026 Plakat' : ''}
+                        className="aspect-video w-full object-contain"
+                      />
+                    </div>
                   )}
                   <div className="flex justify-between items-start gap-3">
                     <div className="min-w-0">
@@ -1555,7 +1558,18 @@ export default function FrauenweilerDorfApp() {
 
             <div className="space-y-4">
               {events.map(event => (
-                <div key={event.id} className="dorf-card p-5">
+                <div key={event.id} className="dorf-card overflow-hidden">
+                  {event.image_url && (
+                    <div className="border-b border-amber-100 bg-gradient-to-br from-amber-50 to-[#dcfce7] p-2">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={event.image_url}
+                        alt={isKerweEvent(event) ? 'Kerwe Frauenweiler 2026 Plakat' : ''}
+                        className="aspect-video w-full rounded-xl object-contain"
+                      />
+                    </div>
+                  )}
+                  <div className="p-5">
                   <div className="flex justify-between">
                     <div>
                       <div className="event-badge mb-2">{event.category}</div>
@@ -1595,6 +1609,7 @@ export default function FrauenweilerDorfApp() {
                     >
                       Mitbringen / Helfen
                     </button>
+                  </div>
                   </div>
                 </div>
               ))}

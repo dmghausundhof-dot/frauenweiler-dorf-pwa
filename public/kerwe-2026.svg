@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 675" role="img" aria-labelledby="title desc">
+  <title id="title">Kerwe Frauenweiler 2026</title>
+  <desc id="desc">Festplakat fuer die Kerwe Frauenweiler vom 25. bis 27. Juli 2026</desc>
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fef3c7"/>
+      <stop offset="0.46" stop-color="#fed7aa"/>
+      <stop offset="1" stop-color="#dcfce7"/>
+    </linearGradient>
+    <linearGradient id="green" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#166534"/>
+      <stop offset="1" stop-color="#22c55e"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="18" stdDeviation="18" flood-color="#14532d" flood-opacity="0.22"/>
+    </filter>
+  </defs>
+
+  <rect width="1200" height="675" fill="url(#sky)"/>
+  <circle cx="1020" cy="120" r="96" fill="#facc15" opacity="0.95"/>
+  <circle cx="1015" cy="118" r="128" fill="#facc15" opacity="0.18"/>
+
+  <path d="M0 478 C160 418 260 454 386 398 C548 326 690 408 835 346 C968 289 1073 331 1200 268 L1200 675 L0 675 Z" fill="#bbf7d0"/>
+  <path d="M0 535 C198 468 343 545 498 472 C652 400 806 488 969 424 C1060 388 1128 379 1200 391 L1200 675 L0 675 Z" fill="url(#green)"/>
+
+  <g opacity="0.9">
+    <path d="M100 129 C146 69 212 64 258 127" stroke="#166534" stroke-width="16" stroke-linecap="round" fill="none"/>
+    <path d="M96 129 L264 129 L242 298 L118 298 Z" fill="#fefce8" stroke="#166534" stroke-width="12" filter="url(#shadow)"/>
+    <path d="M137 158 H224" stroke="#f97316" stroke-width="12" stroke-linecap="round"/>
+    <path d="M132 198 H230" stroke="#166534" stroke-width="10" stroke-linecap="round"/>
+    <path d="M144 237 H217" stroke="#f97316" stroke-width="10" stroke-linecap="round"/>
+  </g>
+
+  <g transform="translate(330 92)" filter="url(#shadow)">
+    <rect x="0" y="0" width="670" height="392" rx="42" fill="#fffef7" opacity="0.96"/>
+    <rect x="26" y="26" width="618" height="340" rx="30" fill="none" stroke="#166534" stroke-width="8" stroke-dasharray="18 14"/>
+    <text x="335" y="105" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="58" font-weight="800" fill="#14532d" letter-spacing="7">KERWE</text>
+    <text x="335" y="214" text-anchor="middle" font-family="Arial Black, Arial, Helvetica, sans-serif" font-size="138" font-weight="900" fill="#f97316">26</text>
+    <text x="335" y="278" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="44" font-weight="800" fill="#166534">25.-27. Juli 2026</text>
+    <text x="335" y="330" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="32" font-weight="700" fill="#334155">Frauenweiler</text>
+  </g>
+
+  <g fill="#f97316" opacity="0.9">
+    <circle cx="112" cy="402" r="9"/>
+    <circle cx="197" cy="376" r="6"/>
+    <circle cx="1074" cy="423" r="8"/>
+    <circle cx="1112" cy="366" r="5"/>
+    <circle cx="922" cy="552" r="7"/>
+  </g>
+  <g stroke="#14532d" stroke-width="9" stroke-linecap="round" opacity="0.88">
+    <path d="M80 558 L126 512 L172 558"/>
+    <path d="M1018 548 L1064 502 L1110 548"/>
+  </g>
+</svg>
