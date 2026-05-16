@@ -47,6 +47,7 @@ CREATE TABLE IF NOT EXISTS events (
   title TEXT NOT NULL,
   description TEXT,
   date DATE NOT NULL,
+  end_date DATE,
   time TEXT,
   location TEXT,
   category TEXT DEFAULT 'Allgemein',

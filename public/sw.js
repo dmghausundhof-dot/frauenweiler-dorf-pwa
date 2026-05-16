@@ -1,7 +1,6 @@
 // Simple Service Worker for Frauenweiler DorfApp PWA
-const CACHE_NAME = 'frauenweiler-dorfapp-v1';
+const CACHE_NAME = 'frauenweiler-dorfapp-v2';
 const urlsToCache = [
-  '/',
   '/manifest.json',
 ];
 
@@ -29,6 +28,18 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request).catch(
+        () =>
+          new Response('Die DorfApp ist offline. Bitte versuche es erneut, sobald du wieder online bist.', {
+            headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+          })
+      )
+    );
+    return;
+  }
+
   event.respondWith(
     caches.match(event.request)
       .then((response) => {

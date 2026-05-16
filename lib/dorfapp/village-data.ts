@@ -13,6 +13,7 @@ export interface Event {
   id: string;
   title: string;
   date: string;
+  endDate?: string | null;
   time: string;
   location: string;
   category: string;
@@ -80,6 +81,7 @@ export async function loadVillageDataFromSupabase(): Promise<{
       id: row.id as string,
       title: row.title as string,
       date: row.date as string,
+      endDate: (row as { end_date?: string | null }).end_date ?? null,
       time: (row.time as string) || '',
       location: (row.location as string) || 'Frauenweiler',
       category: (row.category as string) || 'Allgemein',

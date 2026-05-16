@@ -32,24 +32,61 @@ interface Poll {
   userVoted?: number;
 }
 
+const KERWE_FACEBOOK_URL =
+  'https://www.facebook.com/Frauenweiler/posts/-kerwe-frauenweiler-2026-wir-brauchen-euch-die-vorbereitungen-laufen-und-dieses-/1380725684084507/';
+const KERWE_CONTACT_EMAIL = 'info@frauenweiler.org';
+const KERWE_DONATION_IBAN = 'DE65 6725 0020 0010 4903 59';
+const KERWE_DONATION_BANK = 'Sparkasse Heidelberg';
+
+const kerweSupportReasons = [
+  'Musik und Programm möglich machen',
+  'Genehmigungen finanzieren',
+  'Sicherheit und Ordnerdienst organisieren',
+] as const;
+
+const kerweSponsorBenefits = [
+  'Werbung für unterstützende Unternehmen',
+  'Spendenbescheinigung auf Wunsch',
+  'Ein besonderes Heimatfest für Frauenweiler und die Region',
+] as const;
+
 const mockEvents: Event[] = [
-  { id: '1', title: "Dorffest Frauenweiler 2026", date: "2026-06-14", time: "14:00", location: "Dorfplatz", category: "Fest", attendees: 87, description: "Unser großes Sommerfest mit Live-Musik, Essen & Trinken für die ganze Familie." },
+  {
+    id: 'kerwe-2026',
+    title: 'Kerwe Frauenweiler 2026',
+    date: '2026-07-25',
+    endDate: '2026-07-27',
+    time: '14:00',
+    location: 'Frauenweiler',
+    category: 'Kerwe',
+    attendees: 87,
+    description:
+      'Die Kerwe vom 25.-27. Juli 2026 soll ein besonderes Fest für Frauenweiler und die Region werden. Wegen des anschließenden Baubeginns an der Grundschule könnte sie vorerst die letzte Kerwe in dieser Form sein.',
+  },
   { id: '2', title: "Feuerwehrübung & Tag der offenen Tür", date: "2026-05-24", time: "10:00", location: "Feuerwehrhaus", category: "Feuerwehr", attendees: 34, description: "Vorstellung der neuen Drehleiter und Übung für die Jugendfeuerwehr." },
   { id: '3', title: "Ortsverein Sitzung + Grillen", date: "2026-05-20", time: "19:30", location: "Vereinsheim", category: "Verein", attendees: 19, description: "Monatliche Sitzung des Ortsvereins mit anschließendem Grillen." },
 ];
 
 const mockNews: NewsItem[] = [
-  { id: '1', title: "Neue Bank auf dem Dorfplatz", content: "Die neue Sitzbank am Spielplatz ist aufgestellt. Vielen Dank an alle Spender!", category: "Allgemein", important: false, date: "2026-05-12", socialLinks: [] },
+  {
+    id: 'kerwe-sponsoring-2026',
+    title: 'Kerwe 2026: Sponsoren und Unterstützer gesucht',
+    content:
+      'Für Musik, Genehmigungen und Sicherheit braucht die Kerwe Unterstützung aus der Region. Firmen und Privatpersonen können spenden oder sponsern; Werbung für Unternehmen und eine Spendenbescheinigung sind möglich. Kontakt: info@frauenweiler.org.',
+    category: 'Kerwe',
+    important: true,
+    date: '2026-05-05',
+    socialLinks: [KERWE_FACEBOOK_URL],
+  },
   {
     id: '2',
     title: "Kerwe 2026 – Helfer gesucht!",
-    content: "Wir suchen noch Helfer für den Auf- und Abbau der Kerwe. Meldet euch bitte beim Ortsverein.",
-    category: "Verein",
+    content: "Für die Kerwe vom 25.-27. Juli 2026 suchen wir Helferinnen und Helfer für Aufbau, Abbau, Sicherheit und Programm. Meldet euch bitte beim Ortsverein.",
+    category: "Kerwe",
     important: true,
     date: "2026-05-10",
-    socialLinks: ['https://www.instagram.com/'],
+    socialLinks: [KERWE_FACEBOOK_URL],
   },
-  { id: '3', title: "Straßenfest am 14. Juni", content: "Save the Date! Unser großes Dorffest findet am 14. Juni statt. Mehr Infos folgen.", category: "Fest", important: true, date: "2026-05-08", socialLinks: [] },
 ];
 
 function SocialLinkIcon({ url }: { url: string }) {
@@ -96,34 +133,139 @@ function NewsSocialChips({
   );
 }
 
+function formatEventDateRange(event: Event, pattern = 'EEEE, d. MMMM yyyy') {
+  const start = format(new Date(event.date), pattern, { locale: de });
+  if (!event.endDate || event.endDate === event.date) return start;
+
+  const end = format(new Date(event.endDate), pattern, { locale: de });
+  return `${start} bis ${end}`;
+}
+
+function isKerweEvent(event?: Event | null) {
+  return !!event && /kerwe/i.test(`${event.title} ${event.category}`);
+}
+
+function KerweSupportPanel({
+  compact = false,
+  onContribute,
+}: {
+  compact?: boolean;
+  onContribute?: () => void;
+}) {
+  return (
+    <section
+      className={`rounded-3xl border border-amber-200 bg-gradient-to-br from-amber-50 via-white to-[#f0fdf4] shadow-sm ${
+        compact ? 'p-4' : 'p-5'
+      }`}
+      aria-labelledby="kerwe-support-title"
+    >
+      <div className="flex flex-col gap-4">
+        <div>
+          <div className="inline-flex items-center rounded-full bg-amber-100 px-3 py-1 text-xs font-bold uppercase tracking-wide text-amber-900">
+            Kerwe 2026
+          </div>
+          <h2 id="kerwe-support-title" className={`${compact ? 'mt-2 text-lg' : 'mt-3 text-2xl'} font-semibold text-zinc-950`}>
+            Unterstützung für Musik, Sicherheit und Genehmigungen
+          </h2>
+          <p className="mt-2 text-sm leading-relaxed text-[#475569]">
+            Die Kerwe vom 25.-27. Juli 2026 soll ein unvergessliches Fest werden. Weil danach der Baubeginn an
+            der Grundschule startet, könnte sie vorerst die letzte Kerwe in dieser Form sein.
+          </p>
+        </div>
+
+        <div className={`grid gap-3 ${compact ? '' : 'sm:grid-cols-2'}`}>
+          <div className="rounded-2xl border border-white/80 bg-white/80 p-4">
+            <h3 className="text-sm font-semibold text-zinc-900">Dafür werden Spenden gebraucht</h3>
+            <ul className="mt-2 space-y-1.5 text-sm text-[#475569]">
+              {kerweSupportReasons.map((reason) => (
+                <li key={reason} className="flex gap-2">
+                  <Check className="mt-0.5 h-4 w-4 shrink-0 text-[#166534]" aria-hidden />
+                  <span>{reason}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div className="rounded-2xl border border-white/80 bg-white/80 p-4">
+            <h3 className="text-sm font-semibold text-zinc-900">Für Sponsoren inklusive</h3>
+            <ul className="mt-2 space-y-1.5 text-sm text-[#475569]">
+              {kerweSponsorBenefits.map((benefit) => (
+                <li key={benefit} className="flex gap-2">
+                  <Check className="mt-0.5 h-4 w-4 shrink-0 text-[#166534]" aria-hidden />
+                  <span>{benefit}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-[#166534]/15 bg-white/85 p-4 text-sm text-[#475569]">
+          <div className="font-semibold text-zinc-900">Spendenkonto</div>
+          <div className="mt-1 font-mono text-[#14532d]">{KERWE_DONATION_IBAN}</div>
+          <div className="text-xs text-[#64748b]">{KERWE_DONATION_BANK}</div>
+        </div>
+
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <a
+            href={`mailto:${KERWE_CONTACT_EMAIL}?subject=Kerwe%20Frauenweiler%202026`}
+            className="dorf-button flex-1 justify-center"
+          >
+            <Mail className="h-4 w-4" aria-hidden />
+            Kontakt aufnehmen
+          </a>
+          {onContribute && (
+            <button
+              type="button"
+              onClick={onContribute}
+              className="flex flex-1 items-center justify-center gap-2 rounded-2xl border border-[#166534] px-4 py-3 text-sm font-semibold text-[#166534]"
+            >
+              <Heart className="h-4 w-4" aria-hidden />
+              Mithelfen
+            </button>
+          )}
+          <a
+            href={KERWE_FACEBOOK_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex flex-1 items-center justify-center gap-2 rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm font-semibold text-zinc-700"
+          >
+            <Facebook className="h-4 w-4" aria-hidden />
+            Facebook-Beitrag
+          </a>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 const mockPolls: Poll[] = [
   {
     id: '1',
-    title: "Welche Farbe soll die neue Bank am Dorfplatz haben?",
+    title: "Wie möchtest du die Kerwe 2026 unterstützen?",
     options: [
-      { text: "Grün (wie bisher)", votes: 42 },
-      { text: "Braun / Holzoptik", votes: 31 },
-      { text: "Anthrazit / Modern", votes: 18 },
+      { text: "Beim Aufbau oder Abbau helfen", votes: 42 },
+      { text: "Sponsoren ansprechen", votes: 31 },
+      { text: "Essen / Fingerfood mitbringen", votes: 18 },
     ],
     totalVotes: 91,
   },
   {
     id: '2',
-    title: "Soll es beim Dorffest ein Kinderprogramm geben?",
+    title: "Was ist euch für die Kerwe 2026 besonders wichtig?",
     options: [
-      { text: "Ja, mit Hüpfburg & Basteln", votes: 67 },
-      { text: "Nur ein kleiner Bereich", votes: 22 },
-      { text: "Nein, lieber für alle", votes: 11 },
+      { text: "Live-Musik und Programm", votes: 67 },
+      { text: "Kinder- und Familienangebote", votes: 22 },
+      { text: "Essen, Trinken und Treffpunkt", votes: 11 },
     ],
     totalVotes: 100,
   },
 ];
 
 const mockContributions: Contribution[] = [
-  { id: '1', eventId: '1', type: 'mitbringen', description: "Kuchen / Torte für 8 Personen", needed: 6, signedUp: 4 },
-  { id: '2', eventId: '1', type: 'mitbringen', description: "Salat oder Nudelsalat", needed: 4, signedUp: 2 },
-  { id: '3', eventId: '1', type: 'helfen', description: "Grill bedienen (14–17 Uhr)", needed: 3, signedUp: 3 },
-  { id: '4', eventId: '1', type: 'helfen', description: "Aufbau am Freitagabend", needed: 8, signedUp: 5 },
+  { id: '1', eventId: 'kerwe-2026', type: 'helfen', description: "Sponsoren und Spender in der Region ansprechen", needed: 6, signedUp: 2 },
+  { id: '2', eventId: 'kerwe-2026', type: 'helfen', description: "Aufbau vor dem Kerwe-Wochenende", needed: 10, signedUp: 5 },
+  { id: '3', eventId: 'kerwe-2026', type: 'helfen', description: "Abbau am Montag nach der Kerwe", needed: 10, signedUp: 3 },
+  { id: '4', eventId: 'kerwe-2026', type: 'helfen', description: "Ordnerdienst / Sicherheit unterstützen", needed: 8, signedUp: 2 },
+  { id: '5', eventId: 'kerwe-2026', type: 'mitbringen', description: "Kuchen oder Fingerfood fürs Festwochenende", needed: 8, signedUp: 4 },
 ];
 
 const mockHelpRequests: HelpRequest[] = [
@@ -201,7 +343,7 @@ export default function FrauenweilerDorfApp() {
 
   // Admin form states
   const [newNews, setNewNews] = useState({ title: '', content: '', category: 'Allgemein', important: false, socialLinksRaw: '' });
-  const [newEvent, setNewEvent] = useState({ title: '', description: '', date: '', time: '', location: '', category: 'Fest' });
+  const [newEvent, setNewEvent] = useState({ title: '', description: '', date: '', endDate: '', time: '', location: '', category: 'Fest' });
   const [newContribution, setNewContribution] = useState({ eventId: '', type: 'mitbringen' as 'mitbringen' | 'helfen', description: '', needed: 1 });
   const [selectedEventForNewContrib, setSelectedEventForNewContrib] = useState('');
 
@@ -807,13 +949,14 @@ export default function FrauenweilerDorfApp() {
       return;
     }
 
-    let imageUrl = '';
+    const imageUrl = '';
 
     if (useSupabase) {
       const { error } = await supabase.from('events').insert({
         title: newEvent.title,
         description: newEvent.description,
         date: newEvent.date,
+        end_date: newEvent.endDate || null,
         time: newEvent.time,
         location: newEvent.location,
         category: newEvent.category,
@@ -828,6 +971,7 @@ export default function FrauenweilerDorfApp() {
         id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
         title: newEvent.title,
         date: newEvent.date,
+        endDate: newEvent.endDate || null,
         time: newEvent.time || '00:00',
         location: newEvent.location || 'Frauenweiler',
         category: newEvent.category,
@@ -837,7 +981,7 @@ export default function FrauenweilerDorfApp() {
     }
 
     toast.success('Termin erfolgreich erstellt!');
-    setNewEvent({ title: '', description: '', date: '', time: '', location: '', category: 'Fest' });
+    setNewEvent({ title: '', description: '', date: '', endDate: '', time: '', location: '', category: 'Fest' });
     setShowAdminModal(false);
     if (useSupabase) await refreshVillageData();
   };
@@ -912,6 +1056,7 @@ export default function FrauenweilerDorfApp() {
   }, [events]);
 
   const homeNewsTeaser = useMemo(() => news.slice(0, 3), [news]);
+  const kerweEvent = useMemo(() => events.find((event) => isKerweEvent(event)), [events]);
 
   const filteredHelp = useMemo(() => {
     let rows = helpRequests.filter((h) => h.status === 'open');
@@ -1176,6 +1321,15 @@ export default function FrauenweilerDorfApp() {
               </div>
             </div>
 
+            {kerweEvent && (
+              <KerweSupportPanel
+                onContribute={() => {
+                  setSelectedEventForContrib(kerweEvent.id);
+                  setActiveTab('contribute');
+                }}
+              />
+            )}
+
             <div>
               <h2 className="text-xs font-semibold uppercase tracking-wider text-[#64748b] mb-2 px-1">
                 Dorf & Projekte (extern)
@@ -1191,16 +1345,21 @@ export default function FrauenweilerDorfApp() {
                   <BookOpen className="w-3 h-3 shrink-0" aria-hidden />
                   Geschichte (App)
                 </Link>
-                {['Kerwe & Feste', 'FW hilft', 'Projekte', 'Kontakt'].map((label) => (
+                {[
+                  { label: 'Kerwe-Aufruf', href: KERWE_FACEBOOK_URL },
+                  { label: 'FW hilft', href: 'http://frauenweiler.org/' },
+                  { label: 'Projekte', href: 'http://frauenweiler.org/' },
+                  { label: 'Kontakt', href: `mailto:${KERWE_CONTACT_EMAIL}` },
+                ].map((link) => (
                   <a
-                    key={label}
-                    href="http://frauenweiler.org/"
-                    target="_blank"
-                    rel="noopener noreferrer"
+                    key={link.label}
+                    href={link.href}
+                    target={link.href.startsWith('mailto:') ? undefined : '_blank'}
+                    rel={link.href.startsWith('mailto:') ? undefined : 'noopener noreferrer'}
                     className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-full bg-white border border-zinc-200 text-[#166534] hover:bg-[#f0fdf4]"
                   >
                     <ExternalLink className="w-3 h-3 shrink-0" />
-                    {label}
+                    {link.label}
                   </a>
                 ))}
               </div>
@@ -1233,7 +1392,7 @@ export default function FrauenweilerDorfApp() {
                       <h3 className="font-semibold text-xl">{nextEventHighlight.title}</h3>
                       <div className="flex items-center gap-2 text-sm text-[#64748b] mt-1">
                         <Clock className="w-4 h-4 shrink-0" />
-                        {format(new Date(nextEventHighlight.date), 'EEEE, d. MMMM yyyy', { locale: de })} ·{' '}
+                        {formatEventDateRange(nextEventHighlight)} ·{' '}
                         {nextEventHighlight.time || '?'} Uhr
                       </div>
                       <div className="flex items-center gap-2 text-sm text-[#64748b]">
@@ -1403,7 +1562,7 @@ export default function FrauenweilerDorfApp() {
                       <h3 className="font-semibold text-xl">{event.title}</h3>
                     </div>
                     <div className="text-right text-sm">
-                      <div className="font-mono text-[#166534]">{format(new Date(event.date), 'dd.MM.', { locale: de })}</div>
+                      <div className="font-mono text-[#166534]">{formatEventDateRange(event, 'dd.MM.')}</div>
                       <div>{event.time} Uhr</div>
                     </div>
                   </div>
@@ -1414,6 +1573,12 @@ export default function FrauenweilerDorfApp() {
                   </div>
 
                   <p className="text-sm text-[#475569]">{event.description}</p>
+
+                  {isKerweEvent(event) && (
+                    <div className="mt-4">
+                      <KerweSupportPanel compact onContribute={() => openContributeForEvent(event.id)} />
+                    </div>
+                  )}
 
                   <div className="flex gap-3 mt-5">
                     <button 
@@ -1533,7 +1698,7 @@ export default function FrauenweilerDorfApp() {
                   >
                     <div>
                       <div className="font-semibold">{ev.title}</div>
-                      <div className="text-sm text-[#64748b]">{format(new Date(ev.date), 'dd. MMMM', { locale: de })}</div>
+                      <div className="text-sm text-[#64748b]">{formatEventDateRange(ev, 'dd. MMMM')}</div>
                     </div>
                     <div className="text-[#166534]">→</div>
                   </button>
@@ -1545,8 +1710,22 @@ export default function FrauenweilerDorfApp() {
                 
                 <div className="dorf-card p-5 mb-6">
                   <h3 className="font-semibold">{selectedEvent?.title}</h3>
-                  <p className="text-sm text-[#64748b]">{selectedEvent?.date} • {selectedEvent?.location}</p>
+                  <p className="text-sm text-[#64748b]">
+                    {selectedEvent ? formatEventDateRange(selectedEvent, 'dd. MMMM yyyy') : ''} • {selectedEvent?.location}
+                  </p>
                 </div>
+
+                {isKerweEvent(selectedEvent) && (
+                  <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm leading-relaxed text-amber-950">
+                    <strong className="block text-zinc-950">Kerwe-Unterstützung gesucht</strong>
+                    Neben Aufbau und Abbau hilft besonders Sponsoring: Firmen und Privatpersonen können die Kerwe per
+                    Spende unterstützen oder Sponsor werden. Kontakt: {' '}
+                    <a href={`mailto:${KERWE_CONTACT_EMAIL}`} className="font-semibold underline">
+                      {KERWE_CONTACT_EMAIL}
+                    </a>
+                    .
+                  </div>
+                )}
 
                 <h4 className="font-medium mb-3 px-1">Mitbringen & Helfen</h4>
                 
@@ -2353,6 +2532,7 @@ export default function FrauenweilerDorfApp() {
                     className="flex-1 border rounded-2xl px-4 py-3"
                   >
                     <option>Allgemein</option>
+                    <option>Kerwe</option>
                     <option>Verein</option>
                     <option>Feuerwehr</option>
                     <option>Fest</option>
@@ -2376,11 +2556,15 @@ export default function FrauenweilerDorfApp() {
                 <input placeholder="Titel des Termins" value={newEvent.title} onChange={e => setNewEvent({...newEvent, title: e.target.value})} className="w-full border rounded-2xl px-5 py-3" />
                 <textarea placeholder="Beschreibung..." value={newEvent.description} onChange={e => setNewEvent({...newEvent, description: e.target.value})} rows={3} className="w-full border rounded-2xl px-5 py-3" />
                 <div className="grid grid-cols-2 gap-3">
-                  <input type="date" value={newEvent.date} onChange={e => setNewEvent({...newEvent, date: e.target.value})} className="border rounded-2xl px-5 py-3" />
+                  <input type="date" aria-label="Startdatum" value={newEvent.date} onChange={e => setNewEvent({...newEvent, date: e.target.value})} className="border rounded-2xl px-5 py-3" />
+                  <input type="date" aria-label="Enddatum optional" value={newEvent.endDate} onChange={e => setNewEvent({...newEvent, endDate: e.target.value})} className="border rounded-2xl px-5 py-3" />
+                </div>
+                <div className="grid grid-cols-1 gap-3">
                   <input type="time" value={newEvent.time} onChange={e => setNewEvent({...newEvent, time: e.target.value})} className="border rounded-2xl px-5 py-3" />
                 </div>
                 <input placeholder="Ort (z.B. Dorfplatz)" value={newEvent.location} onChange={e => setNewEvent({...newEvent, location: e.target.value})} className="w-full border rounded-2xl px-5 py-3" />
                 <select value={newEvent.category} onChange={e => setNewEvent({...newEvent, category: e.target.value})} className="w-full border rounded-2xl px-5 py-3">
+                  <option>Kerwe</option>
                   <option>Fest</option>
                   <option>Feuerwehr</option>
                   <option>Verein</option>
