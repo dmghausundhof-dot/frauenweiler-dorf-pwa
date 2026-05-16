@@ -71,9 +71,9 @@ const mockEvents: Event[] = [
 const mockNews: NewsItem[] = [
   {
     id: 'kerwe-sponsoring-2026',
-    title: 'Kerwe 2026: Sponsoren und Unterstützer gesucht',
+    title: 'Kerwe 2026: Spendenkonto und Kontakt',
     content:
-      'Für Musik, Genehmigungen und Sicherheit braucht die Kerwe Unterstützung aus der Region. Firmen und Privatpersonen können spenden oder sponsern; Werbung für Unternehmen und eine Spendenbescheinigung sind möglich. Kontakt: info@frauenweiler.org.',
+      'Jeder Beitrag hilft, das Dorfleben lebendig zu halten. Spendenkonto: IBAN DE65 6725 0020 0010 4903 59 bei der Sparkasse Heidelberg. Bei Interesse an Sponsoring oder Unterstützung bitte eine Nachricht an info@frauenweiler.org senden oder den Facebook-Aufruf öffnen.',
     category: 'Kerwe',
     important: true,
     date: '2026-05-05',
